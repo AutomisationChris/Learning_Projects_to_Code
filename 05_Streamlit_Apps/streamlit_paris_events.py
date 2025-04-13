@@ -28,7 +28,7 @@ for event in daten['records']:
     col1, col2 = st.columns([2, 3])
     with col1:
         if event_pic:
-            st.image(event_pic, use_column_width=True)
+            st.image(event_pic, use_cotainer_width=True)
         else:
             st.write("📸 Kein Bild vorhanden.")
 
