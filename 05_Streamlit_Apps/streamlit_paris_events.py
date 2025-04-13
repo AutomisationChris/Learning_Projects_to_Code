@@ -28,7 +28,7 @@ for event in daten['records']:
     col1, col2 = st.columns([2, 3])
     with col1:
         if event_pic:
-            st.markdown('<a href=event_url><img src=event_pic></a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="{event_url}"><img src="{event_pic}"></a>', unsafe_allow_html=True)
         else:
             st.write("📸 Kein Bild vorhanden.")
 
