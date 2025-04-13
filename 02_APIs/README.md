@@ -41,8 +41,8 @@ See the full [API Overview](../90_DOCS/API_Overview.md) in the `docs/` folder fo
 
 ## Links
 
-- [Main Project Overview](AutomisationChris/Learning_Projects_to_Code/README.md)
-- [API Documentation](AutomisationChris/Learning_Projects_to_Code/90_DOCS/API_Overview.md)
-- [Streamlit Setup](AutomisationChris/Learning_Projects_to_Code/05_Streamlit_Apps/README.md)
+- [Main Project Overview](../Readme.md)
+- [API Documentation](../90_DOCS/API_Overview.md)
+- [Streamlit Setup](../05_Streamlit_Apps/README.md)
 
 ---
