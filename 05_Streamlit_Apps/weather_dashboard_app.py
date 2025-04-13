@@ -11,7 +11,7 @@ st.write("Explore historical weather data for your selected locations!")
 # User input: multiple cities
 st.subheader("Enter city names (one per line):")
 städte_input = st.text_area("Cities:", placeholder="e.g.\nBerlin\nParis\nLondon")
-ort = städte_input.splitlines() if städte_input else []
+ort = städte_input.splitlines().stip() if städte_input else []
 
 # User input: weather parameter selection
 parameter = st.selectbox(
