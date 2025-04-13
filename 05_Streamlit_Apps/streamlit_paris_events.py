@@ -23,8 +23,10 @@ for event in daten['records']:
     address_street = event['fields'].get('address_street', '')
     address_city = event['fields'].get('address_city', '')
     event_url = event['fields'].get('url', '')
-
+    event_pic = event['fields'].get('cover_url','')
+    
     st.markdown(f"### 🎉 {title}")
     st.markdown(f"📍 **{address_name}**, {address_street}, {address_city}")
     st.markdown(f"[🔗 Mehr Infos]({event_url})")
+    st.image(event_pic)
     st.markdown("---")
