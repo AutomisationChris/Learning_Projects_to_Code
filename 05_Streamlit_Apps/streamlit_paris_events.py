@@ -35,6 +35,6 @@ for event in daten['records']:
     with col2:
         st.markdown(f"### 🎉 [{title}]({event_url})")
         st.markdown(f"📍 **{address_name}**, {address_street}, {address_city}")
-        st.markdown(f"[🔗 Mehr Infos]({event_url})")
+        
 
    
