@@ -28,5 +28,5 @@ for event in daten['records']:
     st.markdown(f"### 🎉 {title}")
     st.markdown(f"📍 **{address_name}**, {address_street}, {address_city}")
     st.markdown(f"[🔗 Mehr Infos]({event_url})")
-    st.image(event_pic)
+    st.image(event_pic, width=600)
     st.markdown("---")
