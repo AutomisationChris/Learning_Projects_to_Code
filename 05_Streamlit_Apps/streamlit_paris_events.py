@@ -24,9 +24,16 @@ for event in daten['records']:
     address_city = event['fields'].get('address_city', '')
     event_url = event['fields'].get('url', '')
     event_pic = event['fields'].get('cover_url','')
-    
-    st.markdown(f"### 🎉 {title}")
-    st.markdown(f"📍 **{address_name}**, {address_street}, {address_city}")
-    st.markdown(f"[🔗 Mehr Infos]({event_url})")
-    st.image(event_pic, width=600)
-    st.markdown("---")
+     col1, col2 = st.columns([2, 3])
+    with col1:
+        if event_pic:
+            st.image(event_pic, use_column_width=True)
+        else:
+            st.write("📸 Kein Bild vorhanden.")
+
+    with col2:
+        st.markdown(f"### 🎉 {title}")
+        st.markdown(f"📍 **{address_name}**, {address_street}, {address_city}")
+        st.markdown(f"[🔗 Mehr Infos]({event_url})")
+
+   
