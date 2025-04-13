@@ -18,7 +18,7 @@ The goal is to learn how to connect, query, and work with external data sources 
 - 🌫️ **AirParif API** — Air quality in the Paris region
 - 🇩🇪 **Datenadler Brandenburg** — Open data from the state of Brandenburg, Germany
 
-See the full [API Overview](AutomisationChris/Learning_Projects_to_Code/90_DOCS/API_Overview.md) in the `docs/` folder for details about:
+See the full [API Overview](../90_DOCS/API_Overview.md) in the `docs/` folder for details about:
 - API keys
 - Rate limits
 - API documentation links
