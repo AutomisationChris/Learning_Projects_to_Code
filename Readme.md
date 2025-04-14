@@ -42,10 +42,10 @@ This repository will grow dynamically as I learn — the learning plan, projects
 ## 🚀 Next Steps
 
 - [x] Set up project structure
-- [ ] Upload first scripts
-- [ ] Connect Streamlit Cloud
-- [ ] Document progress in Project Management
-- [ ] Public API integration
+- [x] Upload first scripts
+- [x] Connect Streamlit Cloud
+- [x] Document progress in Project Management
+- [x] Public API integration
 
 ---
 
