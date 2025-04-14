@@ -8,7 +8,7 @@ Learning bit by bit, byte by byte. 🚀
 
 ## 🚀 Current Projects
 
-- **Learning Projects to Code** — My personal coding journey repository. [Check it out!](https://github.com/DEIN-BENUTZERNAME/Learning_Projects_to_Code)
+- **Learning Projects to Code** — My personal coding journey repository. [Check it out!](https://github.com/AutomisationChris/Learning_Projects_to_Code)
 - **Weather Dashboard** — Live weather data visualized with Streamlit (coming soon!)
 
 ## 📚 What I'm Learning
