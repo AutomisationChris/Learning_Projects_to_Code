@@ -1,32 +1,17 @@
-# 👋 Welcome to my GitHub Profile!
-
-## 👨‍💻 About Me
+# 👋 About Me
 
 Step in with me on my discovery of coding.  
 From Python basics to nerdy projects with APIs and Streamlit dashboards.  
-Learning bit by bit, byte by byte. 🚀
+Learning bit by bit, byte by byte.
 
-## 🚀 Current Projects
+🚀 **Interests:**
+- Engineering Simulations (DWSIM, LTSpice, OpenFOAM)
+- Environmental Data & Mapping (QGIS + PyQGIS)
+- Data Visualization (Streamlit, Matplotlib)
+- Big Data Mining with Python
+- Automation & Reporting with Excel
+- Contributing to Open Source projects
 
-- **Learning Projects to Code** — My personal coding journey repository. [Check it out!](https://github.com/AutomisationChris/Learning_Projects_to_Code)
-- **Weather Dashboard** — Live weather data visualized with Streamlit (coming soon!)
+💡 My goal is to build projects that help the community, fuel curiosity, and embrace open-source thinking!
 
-## 📚 What I'm Learning
-
-- Python 🐍
-- Streamlit 🌐
-- API integrations 🔌
-- Data analysis & visualization 📊
-- Open Data projects 🌍
-
-## 📫 How to reach me
-
-> Work in progress — GitHub is my primary contact for now!
-
-## 🌟 Fun Fact
-
-I’m learning every day — and maybe one day, I’ll contribute to Open Source projects like Hacktoberfest!
-
----
-
-*This profile README is a work in progress — stay tuned!*
+Follow my progress here as I learn and build!
