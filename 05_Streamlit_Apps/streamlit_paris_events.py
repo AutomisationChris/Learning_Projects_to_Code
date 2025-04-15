@@ -3,9 +3,9 @@ import requests
 from requests.utils import quote
 from geopy.geocoders import Nominatim
 
-def adress_2_geocode(adress):
+def adress_2_geocode(address):
     geolocator = Nominatim(user_agent="my_geocoder")
-    location = geolocator.geocode(adresse)
+    location = geolocator.geocode(address)
 
     if location:
         st.write(location.address)
@@ -42,7 +42,7 @@ for event in daten['records']:
     event_url = event['fields'].get('url', '')
     event_pic = event['fields'].get('cover_url','')
     adress = f"{address_street}, {address_city}"   
-    adress_2_geocode(adress)
+    adress_2_geocode(address)
     col1, col2 = st.columns([2, 3])
     with col1:
         if event_pic:
