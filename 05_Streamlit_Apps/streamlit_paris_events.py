@@ -1,5 +1,22 @@
 import streamlit as st
 import requests
+from requests.utils import quote
+from geopy.geocoders import Nominatim
+
+def adress_2_geocode(adress):
+    geolocator = Nominatim(user_agent="my_geocoder")
+    location = geolocator.geocode(adresse)
+
+    if location:
+        print(location.address)
+        print(location.latitude, location.longitude)
+    else:
+        print("Adresse nicht gefunden.")
+
+
+
+
+
 
 # Titel der App
 st.title("🎉 Paris Event Dashboard")
@@ -15,8 +32,8 @@ url = f"https://opendata.paris.fr/api/records/1.0/search/?dataset=que-faire-a-pa
 response = requests.get(url)
 daten = response.json()
 
-st.subheader("📅 Veranstaltungen:")
 
+st.subheader("📅 Veranstaltungen:")
 for event in daten['records']:
     title = event['fields'].get('title', 'Kein Titel')
     address_name = event['fields'].get('address_name', 'Ort unbekannt')
@@ -24,7 +41,8 @@ for event in daten['records']:
     address_city = event['fields'].get('address_city', '')
     event_url = event['fields'].get('url', '')
     event_pic = event['fields'].get('cover_url','')
-    
+    adress = f"{adress_street}, {adress_city}"   
+    adress_2_geocode(adress)
     col1, col2 = st.columns([2, 3])
     with col1:
         if event_pic:
