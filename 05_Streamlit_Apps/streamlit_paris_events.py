@@ -41,7 +41,7 @@ for event in daten['records']:
     address_city = event['fields'].get('address_city', '')
     event_url = event['fields'].get('url', '')
     event_pic = event['fields'].get('cover_url','')
-    adress = f"{adress_street}, {adress_city}"   
+    adress = f"{address_street}, {address_city}"   
     adress_2_geocode(adress)
     col1, col2 = st.columns([2, 3])
     with col1:
