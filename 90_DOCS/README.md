@@ -7,8 +7,8 @@ This folder contains important project documentation, overviews, and reference m
 ## Contents
 
 - **APIs_Uebersicht.md** — Overview of all APIs used in this project, including access information and documentation links.
-- *(Planned: Roadmap.md)* — Project goals and timeline (to be added).
-- *(Planned: Glossary.md)* — Technical terms and explanations.
+- **Roadmap.md** — Project goals and timeline (to be added).
+- **Glossary.md** — Technical terms and explanations.
 
 ## Purpose
 
@@ -25,9 +25,9 @@ Documentation is essential for:
 
 ## Links
 
-- [Main Project Overview](../../README.md)
-- [Project Management](../../00_Project_Management/README.md)
-- [API Overview](./APIs_Uebersicht.md)
+- [Main Project Overview](../README.md)
+- [Project Management](../00_Project_Management/README.md)
+- [API Overview](API_Overview.md)
 
 ## Notes
 
