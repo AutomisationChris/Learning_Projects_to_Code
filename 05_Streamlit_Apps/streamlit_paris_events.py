@@ -8,8 +8,8 @@ def adress_2_geocode(adress):
     location = geolocator.geocode(adresse)
 
     if location:
-        print(location.address)
-        print(location.latitude, location.longitude)
+        st.write(location.address)
+        st.write(location.latitude, location.longitude)
     else:
         print("Adresse nicht gefunden.")
 
