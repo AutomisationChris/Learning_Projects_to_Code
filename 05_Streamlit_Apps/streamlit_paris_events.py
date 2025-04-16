@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 from requests.utils import quote
-from geopy.geocoders import Nominatim
 
 def adress_2_geocode(address):
     geolocator = Nominatim(user_agent="my_geocoder")
