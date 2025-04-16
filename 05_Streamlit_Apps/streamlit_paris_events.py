@@ -3,14 +3,17 @@ import requests
 from requests.utils import quote
 
 def adress_2_geocode(address):
-    geolocator = Nominatim(user_agent="my_geocoder")
-    location = geolocator.geocode(address)
-
-    if location:
-        st.write(location.address)
-        st.write(location.latitude, location.longitude)
+    url = f"https://geocoding-api.open-meteo.com/v1/search?name={address}&count=1"
+    response = requests.get(url)
+    daten = response.json()
+    if "results" in daten:
+        latitude = daten["results"][0]["latitude"]
+        longitude = daten["results"][0]["longitude"]
+        return latitude, longitude
     else:
-        print("Adresse nicht gefunden.")
+        st.warning(f"Location '{ort}' not found.")
+        return None, None
+
 
 
 
@@ -40,7 +43,7 @@ for event in daten['records']:
     address_city = event['fields'].get('address_city', '')
     event_url = event['fields'].get('url', '')
     event_pic = event['fields'].get('cover_url','')
-    address = f"{address_street}, {address_city}"   
+    address = address_city   
     adress_2_geocode(address)
     col1, col2 = st.columns([2, 3])
     with col1:
