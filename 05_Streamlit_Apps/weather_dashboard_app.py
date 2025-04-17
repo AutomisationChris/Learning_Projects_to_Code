@@ -106,7 +106,7 @@ if st.button("Show weather data"):
                     if not zeitleiste or not werteleiste:
                         continue
                     df_param = tagesmittelwert(zeitleiste, werteleiste, parameter)
-                    df_all = df_all.merge(df_param[["Datum", param]], on="Datum", how="outer")
+                    df_all = df_all.merge(df_parameter[["Datum", param]], on="Datum", how="outer")
     
                     # 🔁 Für jede Stadt eine Linie
                     plt.plot(df_mittelwert["Datum"], df_mittelwert[parameter], label=ort_element)
