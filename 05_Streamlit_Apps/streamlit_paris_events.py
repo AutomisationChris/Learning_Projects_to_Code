@@ -60,6 +60,9 @@ st.markdown("Erkunde aktuelle Veranstaltungen in Paris – direkt aus der Open D
 # Eingabefeld für Anzahl Events
 anzahl_events = st.slider("Wie viele Events möchtest du sehen?", min_value=1, max_value=20, value=10)
 
+
+preis_option = st.selectbox("Eintrittsart wählen:", ["Alle", "Kostenlos", "Kostenpflichtig"])
+
 # API Request
 url = f"https://opendata.paris.fr/api/records/1.0/search/?dataset=que-faire-a-paris-&rows={anzahl_events}"
 response = requests.get(url)
@@ -80,7 +83,10 @@ for event in daten['records']:
     qfap_tags = [tag.strip().lower() for tag in qfap_tags_raw.split(";")]
     lat, long = adress_2_geocode(address)
     indoor = event['fields'].get('event_indoor')
-    
+    if preis_option == "Kostenlos" and price_type != "gratuit":
+        continue  # überspringe diesen Event
+    elif preis_option == "Kostenpflichtig" and price_type != "payant":
+        continue 
     
     col1, col2 = st.columns([2, 3])
     with col1:
