@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import datetime
 
 # App title
 st.title("Weather Data Dashboard 🌦️")
@@ -11,8 +12,10 @@ st.write("Explore historical weather data for your selected locations!")
 # User input: multiple cities
 st.subheader("Enter city names (one per line):")
 städte_input = st.text_area("Cities:", placeholder="e.g.\nBerlin\nParis\nLondon")
-städte_input.replace(" ","")
+städte_input = städte_input.replace(" ","")
 ort = städte_input.splitlines() if städte_input else []
+start = st.date_input("Startdatum", value=datetime.date(2024, 1, 1))
+end = st.date_input("Enddatum", value=datetime.date(2024, 12, 31))
 
 # User input: weather parameter selection
 parameter = st.selectbox(
