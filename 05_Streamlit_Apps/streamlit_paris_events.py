@@ -14,12 +14,6 @@ def adress_2_geocode(address):
         st.warning(f"Location '{address}' not found.")
         return None, None
 
-
-
-
-
-
-
 # Titel der App
 st.title("🎉 Paris Event Dashboard")
 
@@ -46,7 +40,10 @@ for event in daten['records']:
     price_type = event['fields'].get('price_type', '')
     qfap_tags = event['fields'].get('qfap_tags', '')
     address = f"{address_city}"
+    
     lat, long = adress_2_geocode(address)
+    
+    
     col1, col2 = st.columns([2, 3])
     with col1:
         if event_pic:
@@ -60,7 +57,14 @@ for event in daten['records']:
         st.markdown(f"{lat},{long}")
         st.markdown(f"{price_type}")
         st.markdown(f"{qfap_tags}")
-        
+        if price_type = "gratuit":
+            st.markdown(f"🆓 Kostenloser Eintritt")
+        if price_type = "payant":
+            st.markdown(f"💶💳 Kostenpflichtig")
+        if price_type = NONE:
+            st.markdown(f"❓ Keine Angabe")
+            
+
         
 
    
