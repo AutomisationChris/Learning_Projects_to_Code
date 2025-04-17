@@ -62,13 +62,13 @@ for event in daten['records']:
         elif price_type == "payant":
             st.markdown(f"💶💳 Kostenpflichtig")
         else:
-            st.markdown(f"❓ Keine Angabe")
+            st.markdown(f"❓ Keine Angabe zum Eintrittspreis")
         if indoor == 1:
            st.markdown("🏠 Indoor")
         elif indoor == 0:
            st.markdown("🌳 Outdoor")
         else:
-           st.markdown("❓ Nicht angegeben")
+           st.markdown("❓ Keine Angabe zum Veranstaltungsort")
 
         
 
