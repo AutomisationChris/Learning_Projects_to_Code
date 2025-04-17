@@ -96,31 +96,33 @@ if st.button("Show weather data"):
         st.warning("Please enter at least one city.")
     else:
        
-        for ort_element in ort:
-            lat, long = geodaten_abfragen(ort_element)
-            if lat is None or long is None:
-                continue
-            for parameter in auswahl_parameter:    
+        if st.button("Show weather data"):
+    if not ort:
+        st.warning("Please enter at least one city.")
+    else:
+        for parameter in auswahl_parameter:
+            plt.figure(figsize=(12, 6))  # 📌 Neu: pro Parameter ein Plot
+            for ort_element in ort:
+                lat, long = geodaten_abfragen(ort_element)
+                if lat is None or long is None:
+                    continue
                 zeitleiste, werteleiste = url_past(lat, long, start, end, parameter)
                 if not zeitleiste or not werteleiste:
-                    st.warning(f"No data available for {ort_element} and parameter '{parameter}'.")
                     continue
                 df_mittelwert = tagesmittelwert(zeitleiste, werteleiste)
-            # Plotting
+
+                # 🔁 Für jede Stadt eine Linie
                 plt.plot(df_mittelwert["Datum"], df_mittelwert["Wert"], label=ort_element)
-                st.write(f"**{ort_element}:** Min = {df_mittelwert['Wert'].min():.2f}, Max = {df_mittelwert['Wert'].max():.2f}")
+                st.write(f"**{ort_element}** ({parameter}): Min = {df_mittelwert['Wert'].min():.2f}, Max = {df_mittelwert['Wert'].max():.2f}")
                 st.dataframe(df_mittelwert)
 
-           
-            # Output min/max info
-                plt.figure(figsize=(12, 6))
-                plt.title(f"{parameter.replace('_', ' ').title()} (Daily Average)")
-                plt.xlabel("Date")
-                plt.ylabel(parameter.replace('_', ' ').title())
-                plt.legend()
-                plt.grid(True)
-                plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
-                plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
-                plt.gcf().autofmt_xdate()
-                st.pyplot(plt)
-
+            # 📊 Titel & Legende pro Parameter
+            plt.title(f"{parameter.replace('_', ' ').title()} (Daily Average)")
+            plt.xlabel("Date")
+            plt.ylabel(parameter.replace('_', ' ').title())
+            plt.legend()
+            plt.grid(True)
+            plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
+            plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+            plt.gcf().autofmt_xdate()
+            st.pyplot(plt)
