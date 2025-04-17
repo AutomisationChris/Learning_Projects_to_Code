@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import datetime
 
-current_dateTime = datetime.now()
+
 
 # App title
 st.title("Weather Data Dashboard 🌦️")
