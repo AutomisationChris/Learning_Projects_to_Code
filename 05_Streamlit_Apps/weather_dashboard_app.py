@@ -82,8 +82,8 @@ def url_past(lat, long, start, end, param):
     paramleiste = daten["hourly"].get(param, [])
     return zeitleiste, paramleiste
 
-def tagesmittelwert(zeitleiste, werteleiste):
-    df = pd.DataFrame({"Zeit": zeitleiste, "Wert": werteleiste})
+def tagesmittelwert(zeitleiste, werteleiste, parameter):
+    df = pd.DataFrame({"Zeit": zeitleiste, "{parameter}": werteleiste})
     df["Zeit"] = pd.to_datetime(df["Zeit"])
     df["Datum"] = df["Zeit"].dt.date
     df = df.dropna(subset=["Wert"])
@@ -105,7 +105,7 @@ if st.button("Show weather data"):
                     zeitleiste, werteleiste = url_past(lat, long, start, end, parameter)
                     if not zeitleiste or not werteleiste:
                         continue
-                    df_mittelwert = tagesmittelwert(zeitleiste, werteleiste)
+                    df_mittelwert = tagesmittelwert(zeitleiste, werteleiste, parameter)
     
                     # 🔁 Für jede Stadt eine Linie
                     plt.plot(df_mittelwert["Datum"], df_mittelwert["Wert"], label=ort_element)
