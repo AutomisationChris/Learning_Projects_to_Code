@@ -122,5 +122,5 @@ if st.button("Show weather data"):
                 plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
                 plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
                 plt.gcf().autofmt_xdate()
-        st.pyplot(plt)
+                st.pyplot(plt)
 
