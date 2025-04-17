@@ -57,11 +57,11 @@ for event in daten['records']:
         st.markdown(f"{lat},{long}")
         st.markdown(f"{price_type}")
         st.markdown(f"{qfap_tags}")
-        if price_type = "gratuit":
+        if price_type == "gratuit":
             st.markdown(f"🆓 Kostenloser Eintritt")
-        if price_type = "payant":
+        if price_type == "payant":
             st.markdown(f"💶💳 Kostenpflichtig")
-        if price_type = NONE:
+        if price_type == NONE:
             st.markdown(f"❓ Keine Angabe")
             
 
