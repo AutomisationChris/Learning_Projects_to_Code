@@ -92,7 +92,7 @@ if st.button("Show weather data"):
             lat, long = geodaten_abfragen(ort_element)
             if lat is None or long is None:
                 continue
-            zeitleiste, werteleiste = url_past(lat, long, parameter)
+            zeitleiste, werteleiste = url_past(lat, long, start, end, parameter)
             if not zeitleiste or not werteleiste:
                 st.warning(f"No data available for {ort_element} and parameter '{parameter}'.")
                 continue
