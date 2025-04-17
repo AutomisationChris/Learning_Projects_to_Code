@@ -104,13 +104,14 @@ if st.button("Show weather data"):
             if not zeitleiste or not werteleiste:
                 st.warning(f"No data available for {ort_element} and parameter '{parameter}'.")
                 continue
-            zeitleiste, werteleiste = tagesmittelwert(zeitleiste, werteleiste)
+           df_mittelwert = tagesmittelwert(zeitleiste, werteleiste)
+           # Plotting
+           plt.plot(df_mittelwert["Datum"], df_mittelwert["Wert"], label=ort_element)
+           st.write(f"**{ort_element}:** Min = {df_mittelwert['Wert'].min():.2f}, Max = {df_mittelwert['Wert'].max():.2f}")
+           st.dataframe(df_mittelwert)
 
-            # Plotting
-            plt.plot(zeitleiste, werteleiste, label=ort_element)
-
+           
             # Output min/max info
-            st.write(f"**{ort_element}:** Min = {min(werteleiste):.2f}, Max = {max(werteleiste):.2f}")
 
         plt.title(f"{parameter.replace('_', ' ').title()} (Daily Average)")
         plt.xlabel("Date")
