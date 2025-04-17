@@ -107,9 +107,9 @@ if st.button("Show weather data"):
                     continue
                 df_mittelwert = tagesmittelwert(zeitleiste, werteleiste)
             # Plotting
-            plt.plot(df_mittelwert["Datum"], df_mittelwert["Wert"], label=ort_element)
-            st.write(f"**{ort_element}:** Min = {df_mittelwert['Wert'].min():.2f}, Max = {df_mittelwert['Wert'].max():.2f}")
-            st.dataframe(df_mittelwert)
+                plt.plot(df_mittelwert["Datum"], df_mittelwert["Wert"], label=ort_element)
+                st.write(f"**{ort_element}:** Min = {df_mittelwert['Wert'].min():.2f}, Max = {df_mittelwert['Wert'].max():.2f}")
+                st.dataframe(df_mittelwert)
 
            
             # Output min/max info
