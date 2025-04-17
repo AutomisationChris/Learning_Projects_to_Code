@@ -86,7 +86,7 @@ def tagesmittelwert(zeitleiste, werteleiste, parameter):
     df = pd.DataFrame({"Zeit": zeitleiste, "{parameter}": werteleiste})
     df["Zeit"] = pd.to_datetime(df["Zeit"])
     df["Datum"] = df["Zeit"].dt.date
-    df = df.dropna(subset=["Wert"])
+    df = df.dropna(subset=["{parameter}"])
     df_gruppe = df.groupby("Datum").mean().reset_index()
     return df_gruppe  # Gib den DataFrame direkt zurück
 
