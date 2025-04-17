@@ -16,8 +16,8 @@ st.subheader("Enter city names (one per line):")
 städte_input = st.text_area("Cities:", placeholder="e.g.\nBerlin\nParis\nLondon")
 städte_input = städte_input.replace(" ","")
 ort = städte_input.splitlines() if städte_input else []
-start = st.date_input("Startdatum", value=datetime.date(2024, 1, 1), min_value=(1981, 26, 9)
-end = st.date_input("Enddatum", value=datetime.date(2024, 12, 31), min_value=datetime.date(1981, 25, 9, max_value=datetime.date.today() )
+start = st.date_input("Startdatum", value=datetime.date(2024, 1, 1))
+end = st.date_input("Enddatum", value=datetime.date(2024, 12, 31) )
 
 # User input: weather parameter selection
 parameter = st.selectbox(
