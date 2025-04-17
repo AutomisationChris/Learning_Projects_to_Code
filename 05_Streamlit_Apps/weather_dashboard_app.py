@@ -109,7 +109,7 @@ if st.button("Show weather data"):
     
                     # 🔁 Für jede Stadt eine Linie
                     plt.plot(df_mittelwert["Datum"], df_mittelwert[parameter], label=ort_element)
-                    st.write(f"**{ort_element}** (parameter): Min = {df_mittelwert['{parameter}'].min():.2f}, Max = {df_mittelwert[parameter].max():.2f}")
+                    st.write(f"**{ort_element}** (parameter): Min = {df_mittelwert[parameter].min():.2f}, Max = {df_mittelwert[parameter].max():.2f}")
                     st.dataframe(df_mittelwert)
     
                 # 📊 Titel & Legende pro Parameter
