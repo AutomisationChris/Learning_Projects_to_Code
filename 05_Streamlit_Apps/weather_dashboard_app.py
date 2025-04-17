@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import datetime
 
-
+#constants
+min_date = datetime.date(1981, 9, 26)
+max_date = datetime.date.today()
 
 # App title
 st.title("Weather Data Dashboard 🌦️")
@@ -16,8 +18,8 @@ st.subheader("Enter city names (one per line):")
 städte_input = st.text_area("Cities:", placeholder="e.g.\nBerlin\nParis\nLondon")
 städte_input = städte_input.replace(" ","")
 ort = städte_input.splitlines() if städte_input else []
-start = st.date_input("Startdatum", value=datetime.date(2024, 1, 1), min_value=[datetime.date(2024, 1, 1)] )
-end = st.date_input("Enddatum", value=datetime.date(2024, 12, 31) )
+start = st.date_input("Startdatum", value=datetime.date(2024, 1, 1), min_value=min_date )
+end = st.date_input("Enddatum", value=datetime.date(2024, 12, 31), max_value=max_date )
 
 # User input: weather parameter selection
 parameter = st.selectbox(
