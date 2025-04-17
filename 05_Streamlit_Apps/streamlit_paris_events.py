@@ -38,10 +38,11 @@ for event in daten['records']:
     event_url = event['fields'].get('url', '')
     event_pic = event['fields'].get('cover_url','')
     price_type = event['fields'].get('price_type', '')
-    qfap_tags = event['fields'].get('qfap_tags', '')
+    qfap_tags_raw = event['fields'].get('qfap_tags', '')
     address = f"{address_city}"
-    
+    qfap_tags = [tag.strip().lower() for tag in tags_raw.split(";")]
     lat, long = adress_2_geocode(address)
+    indoor = event['fields'].get('event_indoor')
     
     
     col1, col2 = st.columns([2, 3])
@@ -62,7 +63,12 @@ for event in daten['records']:
             st.markdown(f"💶💳 Kostenpflichtig")
         else:
             st.markdown(f"❓ Keine Angabe")
-            
+        if indoor == 1:
+           st.markdown("🏠 Indoor")
+        elif indoor == 0:
+           st.markdown("🌳 Outdoor")
+        else:
+           st.markdown("❓ Nicht angegeben")
 
         
 
