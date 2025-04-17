@@ -114,13 +114,13 @@ if st.button("Show weather data"):
            
             # Output min/max info
 
-        plt.title(f"{parameter.replace('_', ' ').title()} (Daily Average)")
-        plt.xlabel("Date")
-        plt.ylabel(parameter.replace('_', ' ').title())
-        plt.legend()
-        plt.grid(True)
-        plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
-        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
-        plt.gcf().autofmt_xdate()
+                plt.title(f"{parameter.replace('_', ' ').title()} (Daily Average)")
+                plt.xlabel("Date")
+                plt.ylabel(parameter.replace('_', ' ').title())
+                plt.legend()
+                plt.grid(True)
+                plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
+                plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+                plt.gcf().autofmt_xdate()
         st.pyplot(plt)
 
