@@ -62,11 +62,11 @@ def geodaten_abfragen(ort):
         st.warning(f"Location '{ort}' not found.")
         return None, None
 
-def url_past(lat, long, param):
+def url_past(lat, long, start, end, param):
     url = (
         f"https://archive-api.open-meteo.com/v1/archive?"
         f"latitude={lat}&longitude={long}&hourly={param}"
-        f"&start_date=2024-01-01&end_date=2025-01-01"
+        f"&start_date={start}&end_date={end}"
     )
     response = requests.get(url)
     daten = response.json()
