@@ -11,7 +11,7 @@ def adress_2_geocode(address):
         longitude = daten["results"][0]["longitude"]
         return latitude, longitude
     else:
-        st.warning(f"Location '{ort}' not found.")
+        st.warning(f"Location '{address}' not found.")
         return None, None
 
 
