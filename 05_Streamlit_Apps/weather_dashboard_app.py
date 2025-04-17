@@ -108,7 +108,7 @@ if st.button("Show weather data"):
                     df_mittelwert = tagesmittelwert(zeitleiste, werteleiste, parameter)
     
                     # 🔁 Für jede Stadt eine Linie
-                    plt.plot(df_mittelwert["Datum"], df_mittelwert["Wert"], label=ort_element)
+                    plt.plot(df_mittelwert["Datum"], df_mittelwert["{parameter}"], label=ort_element)
                     st.write(f"**{ort_element}** ({parameter}): Min = {df_mittelwert['Wert'].min():.2f}, Max = {df_mittelwert['Wert'].max():.2f}")
                     st.dataframe(df_mittelwert)
     
