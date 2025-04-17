@@ -26,7 +26,7 @@ if start > end:
     st.stop()
     
 # User input: weather parameter selection
-parameter = st.multiselect(
+auswahl_parameter = st.multiselect(
     "Select a weather parameter to visualize:",
     [
         "temperature_2m",
@@ -100,11 +100,12 @@ if st.button("Show weather data"):
             lat, long = geodaten_abfragen(ort_element)
             if lat is None or long is None:
                 continue
-            zeitleiste, werteleiste = url_past(lat, long, start, end, parameter)
-            if not zeitleiste or not werteleiste:
-                st.warning(f"No data available for {ort_element} and parameter '{parameter}'.")
-                continue
-            df_mittelwert = tagesmittelwert(zeitleiste, werteleiste)
+            for parameter in auswahl_parameter    
+                zeitleiste, werteleiste = url_past(lat, long, start, end, parameter)
+                if not zeitleiste or not werteleiste:
+                    st.warning(f"No data available for {ort_element} and parameter '{parameter}'.")
+                    continue
+                df_mittelwert = tagesmittelwert(zeitleiste, werteleiste)
             # Plotting
             plt.plot(df_mittelwert["Datum"], df_mittelwert["Wert"], label=ort_element)
             st.write(f"**{ort_element}:** Min = {df_mittelwert['Wert'].min():.2f}, Max = {df_mittelwert['Wert'].max():.2f}")
