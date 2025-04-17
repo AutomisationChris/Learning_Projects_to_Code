@@ -91,12 +91,8 @@ def tagesmittelwert(zeitleiste, werteleiste):
     return df_gruppe  # Gib den DataFrame direkt zurück
 
 # Process and plot data
+     
 if st.button("Show weather data"):
-    if not ort:
-        st.warning("Please enter at least one city.")
-    else:
-        
-    if st.button("Show weather data"):
         if not ort:
             st.warning("Please enter at least one city.")
         else:
