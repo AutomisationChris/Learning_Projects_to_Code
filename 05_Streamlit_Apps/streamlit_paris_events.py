@@ -43,6 +43,8 @@ for event in daten['records']:
     address_city = event['fields'].get('address_city', '')
     event_url = event['fields'].get('url', '')
     event_pic = event['fields'].get('cover_url','')
+    price_type = event['fields'].get('price_typ','')
+    qfap_tags = event['fields'].get('qfab_tags','')
     address = f"{address_city}"
     lat, long = adress_2_geocode(address)
     col1, col2 = st.columns([2, 3])
@@ -56,6 +58,9 @@ for event in daten['records']:
         st.markdown(f"### 🎉 [{title}]({event_url})")
         st.markdown(f"📍 **{address_name}**, {address_street}, {address_city}")
         st.markdown(f"{lat},{long}")
+        st.markdown(f"{price_type}")
+        st.markdown(f"{qfap_tags}")
+        
         
 
    
