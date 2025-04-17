@@ -65,6 +65,7 @@ nur_kostenlos = st.sidebar.checkbox("Nur kostenlose Events anzeigen")
 st.markdown("Wenn die Checkbox nicht aktiviert ist, werden alle Events angezeigt.")
 verfügbare_tags = list(tag_emojis.keys())
 ausgewählte_tags = st.sidebar.multiselect("Event-Tags filtern:", verfügbare_tags)
+st.markdown("T E S T")
 
 # API Request
 url = f"https://opendata.paris.fr/api/records/1.0/search/?dataset=que-faire-a-paris-&rows={anzahl_events}"
