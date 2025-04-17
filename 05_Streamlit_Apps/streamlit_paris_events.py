@@ -47,7 +47,7 @@ tag_emojis = {
     "santé": "❤️ Santé",
     "street-art": "🧱 Street-Art",
     "brocante": "🧺 Brocante",
-    "": "❓ Unbekannt"
+    "": "❓ Keine Kategorie eingetragen"
 }
 
 
