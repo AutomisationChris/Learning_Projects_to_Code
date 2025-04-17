@@ -59,7 +59,7 @@ st.markdown("Erkunde aktuelle Veranstaltungen in Paris – direkt aus der Open D
 
 # Eingabefeld für Anzahl Events
 anzahl_events = st.slider("Wie viele Events möchtest du sehen?", min_value=1, max_value=20, value=10)
-
+preis_option = st.selectbox("Eintrittsart wählen:", ["Alle", "Kostenlos", "Kostenpflichtig"])
 
 nur_kostenlos = st.sidebar.checkbox("Nur kostenlose Events anzeigen")
 st.markdown("Wenn die Checkbox nicht aktiviert ist, werden alle Events angezeigt.")
