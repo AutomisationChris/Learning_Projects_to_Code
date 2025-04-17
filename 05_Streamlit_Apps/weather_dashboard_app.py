@@ -88,7 +88,7 @@ def tagesmittelwert(zeitleiste, werteleiste):
     df["Datum"] = df["Zeit"].dt.date
     df = df.dropna(subset=["Wert"])
     df_gruppe = df.groupby("Datum").mean().reset_index()
-    return df_gruppe["Datum"], df_gruppe["Wert"]
+    return df_gruppe  # Gib den DataFrame direkt zurück
 
 # Process and plot data
 if st.button("Show weather data"):
