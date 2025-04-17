@@ -45,7 +45,8 @@ for event in daten['records']:
     event_pic = event['fields'].get('cover_url','')
     address = f"{address_city}"
     print(address)
-    adress_2_geocode(address)
+    lat, long = adress_2_geocode(address)
+    print(f'{lat},{long})
     col1, col2 = st.columns([2, 3])
     with col1:
         if event_pic:
