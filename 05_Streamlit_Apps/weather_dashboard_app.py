@@ -105,13 +105,16 @@ if st.button("Show weather data"):
                     zeitleiste, werteleiste = url_past(lat, long, start, end, parameter)
                     if not zeitleiste or not werteleiste:
                         continue
-                    df_mittelwert = tagesmittelwert(zeitleiste, werteleiste, parameter)
+                    df_param = tagesmittelwert(zeitleiste, werteleiste, parameter)
+                    df_all = df_all.merge(df_param[["Datum", param]], on="Datum", how="outer")
     
                     # 🔁 Für jede Stadt eine Linie
                     plt.plot(df_mittelwert["Datum"], df_mittelwert[parameter], label=ort_element)
                     st.write(f"**{ort_element}** (parameter): Min = {df_mittelwert[parameter].min():.2f}, Max = {df_mittelwert[parameter].max():.2f}")
                     st.dataframe(df_mittelwert)
-    
+                
+                plt.plot(df_all["Datum"], df_all[param], label=f"{stadt} – {param}")
+                
                 # 📊 Titel & Legende pro Parameter
                 plt.title(f"{parameter.replace('_', ' ').title()} (Daily Average)")
                 plt.xlabel("Date")
