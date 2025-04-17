@@ -40,7 +40,7 @@ for event in daten['records']:
     price_type = event['fields'].get('price_type', '')
     qfap_tags_raw = event['fields'].get('qfap_tags', '')
     address = f"{address_city}"
-    qfap_tags = [tag.strip().lower() for tag in tags_raw.split(";")]
+    qfap_tags = [tag.strip().lower() for tag in qfap_tags_raw.split(";")]
     lat, long = adress_2_geocode(address)
     indoor = event['fields'].get('event_indoor')
     
