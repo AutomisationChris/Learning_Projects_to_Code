@@ -55,13 +55,12 @@ for event in daten['records']:
         st.markdown(f"### 🎉 [{title}]({event_url})")
         st.markdown(f"📍 **{address_name}**, {address_street}, {address_city}")
         st.markdown(f"{lat},{long}")
-        st.markdown(f"{price_type}")
         st.markdown(f"{qfap_tags}")
         if price_type == "gratuit":
             st.markdown(f"🆓 Kostenloser Eintritt")
-        if price_type == "payant":
+        elif price_type == "payant":
             st.markdown(f"💶💳 Kostenpflichtig")
-        if price_type == NONE:
+        else price_type == NONE:
             st.markdown(f"❓ Keine Angabe")
             
 
