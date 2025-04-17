@@ -95,7 +95,7 @@ if st.button("Show weather data"):
     if not ort:
         st.warning("Please enter at least one city.")
     else:
-        plt.figure(figsize=(12, 6))
+       
         for ort_element in ort:
             lat, long = geodaten_abfragen(ort_element)
             if lat is None or long is None:
@@ -113,7 +113,7 @@ if st.button("Show weather data"):
 
            
             # Output min/max info
-
+                plt.figure(figsize=(12, 6))
                 plt.title(f"{parameter.replace('_', ' ').title()} (Daily Average)")
                 plt.xlabel("Date")
                 plt.ylabel(parameter.replace('_', ' ').title())
