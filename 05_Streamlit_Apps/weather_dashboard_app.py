@@ -26,7 +26,7 @@ if start > end:
     st.stop()
     
 # User input: weather parameter selection
-parameter = st.selectbox(
+parameter = st.multiselect(
     "Select a weather parameter to visualize:",
     [
         "temperature_2m",
