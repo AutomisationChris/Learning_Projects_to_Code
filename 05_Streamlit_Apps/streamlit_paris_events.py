@@ -44,9 +44,7 @@ for event in daten['records']:
     event_url = event['fields'].get('url', '')
     event_pic = event['fields'].get('cover_url','')
     address = f"{address_city}"
-    print(address)
     lat, long = adress_2_geocode(address)
-    print(f'{lat},{long}')
     col1, col2 = st.columns([2, 3])
     with col1:
         if event_pic:
@@ -57,6 +55,7 @@ for event in daten['records']:
     with col2:
         st.markdown(f"### 🎉 [{title}]({event_url})")
         st.markdown(f"📍 **{address_name}**, {address_street}, {address_city}")
+        st.markdown(f"{lat},{long}")
         
 
    
