@@ -21,6 +21,10 @@ ort = städte_input.splitlines() if städte_input else []
 start = st.date_input("Startdatum", value=datetime.date(2024, 1, 1), min_value=min_date )
 end = st.date_input("Enddatum", value=datetime.date(2024, 12, 31), max_value=max_date )
 
+if start > end:
+    st.error("Das Startdatum darf nicht nach dem Enddatum liegen.")
+    st.stop()
+    
 # User input: weather parameter selection
 parameter = st.selectbox(
     "Select a weather parameter to visualize:",
