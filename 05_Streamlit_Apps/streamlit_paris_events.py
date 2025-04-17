@@ -14,6 +14,43 @@ def adress_2_geocode(address):
         st.warning(f"Location '{address}' not found.")
         return None, None
 
+tag_emojis = {
+    "atelier": "🎨 Kunst",
+    "enfants": "🧒 Kinder",
+    "sport": "🏅 Sport",
+    "concert": "🎵 Konzert",
+    "théâtre": "🎭 Theater",
+    "expo": "🖼️ Expo",
+    "photo": "📷 Photo",
+    "art contemporain": "🌀 Moderne Kunst",
+    "danse": "💃 Tanzveranstaltung",
+    "cirque": "🎪 Zirkus",
+    "bd": "📚 Comics",
+    "littérature": "📖 Literatur",
+    "festival": "🎉 Festival",
+    "sciences": "🔬 Naturwissenschaften",
+    "innovation": "💡 Innovation",
+    "histoire": "🏰 Historisches",
+    "nature": "🌿 Natur",
+    "balade urbaine": "🚶 Balade urbaine",
+    "loisirs": "🧩 Loisirs",
+    "nuit": "🌙 Party, Party, Party",
+    "gourmand": "🍽️ Gaumenfreuden",
+    "spectacle musical": "🎶 Musikalisches Spektakel",
+    "solidarité": "🤝 Solidarische Aktivitäten",
+    "humour": "😂 Humour",
+    "salon": "🏛️ Salon",
+    "conférence": "🎤 Konferenz",
+    "lgbt": "🏳️‍🌈 LGBT",
+    "ecrans": "🖥️ Écrans",
+    "peinture": "🖌️ Malen",
+    "santé": "❤️ Santé",
+    "street-art": "🧱 Street-Art",
+    "brocante": "🧺 Brocante",
+    "": "❓ Unbekannt"
+}
+
+
 # Titel der App
 st.title("🎉 Paris Event Dashboard")
 
@@ -55,8 +92,6 @@ for event in daten['records']:
     with col2:
         st.markdown(f"### 🎉 [{title}]({event_url})")
         st.markdown(f"📍 **{address_name}**, {address_street}, {address_city}")
-        st.markdown(f"{lat},{long}")
-        st.markdown(f"{qfap_tags}")
         if price_type == "gratuit":
             st.markdown(f"🆓 Kostenloser Eintritt")
         elif price_type == "payant":
@@ -69,7 +104,8 @@ for event in daten['records']:
            st.markdown("🌳 Outdoor")
         else:
            st.markdown("❓ Keine Angabe zum Veranstaltungsort")
-
+        emojis = [tag_emojis.get(tag, tag.title()) for tag in qfap_tags]
+        st.markdown(" | ".join(emojis))
         
 
    
