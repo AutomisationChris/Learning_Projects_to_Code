@@ -60,7 +60,7 @@ for event in daten['records']:
             st.markdown(f"🆓 Kostenloser Eintritt")
         elif price_type == "payant":
             st.markdown(f"💶💳 Kostenpflichtig")
-        else price_type == NONE:
+        else:
             st.markdown(f"❓ Keine Angabe")
             
 
