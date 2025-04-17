@@ -43,8 +43,8 @@ for event in daten['records']:
     address_city = event['fields'].get('address_city', '')
     event_url = event['fields'].get('url', '')
     event_pic = event['fields'].get('cover_url','')
-    price_type = event['fields'].get('price_typ','')
-    qfap_tags = event['fields'].get('qfab_tags','')
+    price_type = event['fields'].get('price_type', '')
+    qfap_tags = event['fields'].get('qfap_tags', '')
     address = f"{address_city}"
     lat, long = adress_2_geocode(address)
     col1, col2 = st.columns([2, 3])
