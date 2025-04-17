@@ -5,29 +5,31 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import datetime
 
-#constants
+# --- Konstanten ---
 min_date = datetime.date(1981, 9, 26)
 max_date = datetime.date.today()
 
-# App title
+# --- App Titel & Beschreibung ---
 st.title("Weather Data Dashboard 🌦️")
 st.write("Explore historical weather data for your selected locations!")
 
-# User input: multiple cities
+# --- Eingabe Städte ---
 st.subheader("Enter city names (one per line):")
 städte_input = st.text_area("Cities:", placeholder="e.g.\nBerlin\nParis\nLondon")
-städte_input = städte_input.replace(" ","")
+städte_input = städte_input.replace(" ", "")
 ort = städte_input.splitlines() if städte_input else []
-start = st.date_input("Startdatum", value=datetime.date(2024, 1, 1), min_value=min_date )
-end = st.date_input("Enddatum", value=datetime.date(2024, 12, 31), max_value=max_date )
+
+# --- Datumsbereich ---
+start = st.date_input("Startdatum", value=datetime.date(2024, 1, 1), min_value=min_date)
+end = st.date_input("Enddatum", value=datetime.date(2024, 12, 31), max_value=max_date)
 
 if start > end:
     st.error("Das Startdatum darf nicht nach dem Enddatum liegen.")
     st.stop()
-    
-# User input: weather parameter selection
+
+# --- Wetterparameter Auswahl ---
 auswahl_parameter = st.multiselect(
-    "Select a weather parameter to visualize:",
+    "Select weather parameters to visualize:",
     [
         "temperature_2m",
         "relative_humidity_2m",
@@ -57,7 +59,7 @@ auswahl_parameter = st.multiselect(
     ]
 )
 
-# Helper functions
+# --- Hilfsfunktionen ---
 def geodaten_abfragen(ort):
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={ort}&count=1"
     response = requests.get(url)
@@ -88,40 +90,49 @@ def tagesmittelwert(zeitleiste, werteleiste, parameter):
     df["Datum"] = df["Zeit"].dt.date
     df = df.dropna(subset=[parameter])
     df_gruppe = df.groupby("Datum").mean().reset_index()
-    return df_gruppe  # Gib den DataFrame direkt zurück
+    return df_gruppe
 
-# Process and plot data
-     
+# --- Hauptlogik ---
 if st.button("Show weather data"):
-        if not ort:
-            st.warning("Please enter at least one city.")
-        else:
+    if not ort:
+        st.warning("Please enter at least one city.")
+    elif not auswahl_parameter:
+        st.warning("Please select at least one weather parameter.")
+    else:
+        for ort_element in ort:
+            lat, long = geodaten_abfragen(ort_element)
+            if lat is None or long is None:
+                continue
+
+            df_all = pd.DataFrame()
             for parameter in auswahl_parameter:
-                plt.figure(figsize=(12, 6))  # 📌 Neu: pro Parameter ein Plot
-                for ort_element in ort:
-                    lat, long = geodaten_abfragen(ort_element)
-                    if lat is None or long is None:
-                        continue
-                    zeitleiste, werteleiste = url_past(lat, long, start, end, parameter)
-                    if not zeitleiste or not werteleiste:
-                        continue
-                    df_param = tagesmittelwert(zeitleiste, werteleiste, parameter)
-                    df_all = df_all.merge(df_parameter[["Datum", param]], on="Datum", how="outer")
-    
-                    # 🔁 Für jede Stadt eine Linie
-                    plt.plot(df_mittelwert["Datum"], df_mittelwert[parameter], label=ort_element)
-                    st.write(f"**{ort_element}** (parameter): Min = {df_mittelwert[parameter].min():.2f}, Max = {df_mittelwert[parameter].max():.2f}")
-                    st.dataframe(df_mittelwert)
-                
-                plt.plot(df_all["Datum"], df_all[param], label=f"{stadt} – {param}")
-                
-                # 📊 Titel & Legende pro Parameter
-                plt.title(f"{parameter.replace('_', ' ').title()} (Daily Average)")
-                plt.xlabel("Date")
-                plt.ylabel(parameter.replace('_', ' ').title())
+                zeitleiste, werteleiste = url_past(lat, long, start, end, parameter)
+                if not zeitleiste or not werteleiste:
+                    st.warning(f"No data available for {ort_element} and '{parameter}'")
+                    continue
+                df_param = tagesmittelwert(zeitleiste, werteleiste, parameter)
+
+                if df_all.empty:
+                    df_all["Datum"] = df_param["Datum"]
+
+                df_all = df_all.merge(df_param[["Datum", parameter]], on="Datum", how="outer")
+
+            if not df_all.empty:
+                # --- Plot pro Stadt mit allen Parametern ---
+                plt.figure(figsize=(12, 6))
+                for parameter in auswahl_parameter:
+                    if parameter in df_all.columns:
+                        plt.plot(df_all["Datum"], df_all[parameter], label=parameter)
+
+                plt.title(f"Wetterparameter für {ort_element}")
+                plt.xlabel("Datum")
+                plt.ylabel("Wert")
                 plt.legend()
                 plt.grid(True)
                 plt.gca().xaxis.set_major_locator(mdates.MonthLocator())
                 plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
                 plt.gcf().autofmt_xdate()
                 st.pyplot(plt)
+
+                st.write(f"**{ort_element} – Datenübersicht:**")
+                st.dataframe(df_all)
