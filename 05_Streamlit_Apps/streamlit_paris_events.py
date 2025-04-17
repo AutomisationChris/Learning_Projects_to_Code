@@ -64,7 +64,7 @@ preis_option = st.selectbox("Eintrittsart wählen:", ["Alle", "Kostenlos", "Kost
 nur_kostenlos = st.sidebar.checkbox("Nur kostenlose Events anzeigen")
 st.markdown("Wenn die Checkbox nicht aktiviert ist, werden alle Events angezeigt.")
 verfügbare_tags = list(tag_emojis.keys())
-ausgewählte_tags = st.sidebar.multiselect("Event-Tags filtern:", verfügbare_tags)
+ausgewählte_tags = st.multiselect("Event-Tags filtern:", verfügbare_tags)
 st.markdown("T E S T")
 
 # API Request
