@@ -1,20 +1,22 @@
-# 🛠️ Tool Overview
 
-This document provides an overview of all tools, libraries, and environments used in my learning and project journey.
+# 🛠️ Tool_Overview.md
 
-| Tool / Library          | Purpose / Use Case                                       | Integration |
-|------------------------|-----------------------------------------------------------|-------------|
-| **Python**              | Main programming language                                | ✅ Core |
-| **Streamlit**           | Web dashboards and visualization                         | ✅ Yes |
-| **DWSIM**               | Process simulation (Chemical Engineering)                | ✅ With Python.NET |
-| **LTSpice**             | Circuit simulation (Electrical Engineering)              | ⚠️ Indirect (File I/O Automation) |
-| **OpenFOAM**            | CFD - Computational Fluid Dynamics                       | ✅ PyFoam |
-| **QGIS + PyQGIS**       | Environmental GIS analysis, map visualization            | ✅ PyQGIS |
-| **Pandas**              | Data analysis and processing                             | ✅ Core |
-| **Matplotlib**          | Data visualization                                       | ✅ Core |
-| **Requests**            | API interaction                                          | ✅ Core |
-| **Openpyxl / xlwings**  | Python & Excel integration                               | ✅ Planned |
-| **Dask / PySpark**      | Big Data handling                                        | ✅ Planned |
-| **Markdown**            | Documentation in GitHub                                  | ✅ Core |
+## Libraries
+- `requests`: API-Abfragen
+- `pandas`: Datenverarbeitung
+- `matplotlib`: Diagramme
+- `streamlit`: Web-GUI
+- `datetime`: Datumshandling
 
-_This table will grow with my projects!
+## APIs
+- Open-Meteo API (Forecast & Archive)
+- OpenData Paris Events (visuelle Integration)
+- Geocoding API (Koordinatenabfrage)
+
+## Geplant
+- CSV-Export (pandas.to_csv)
+- evtl. Erweiterung mit SQLite oder JSON
+
+## GUI/Frontend
+- Streamlit Cloud
+- GitHub Pages (Dokumentation)
