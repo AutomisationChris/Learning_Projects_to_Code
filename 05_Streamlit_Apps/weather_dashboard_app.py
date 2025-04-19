@@ -136,3 +136,10 @@ if st.button("Show weather data"):
 
                 st.write(f"**{ort_element} – Datenübersicht:**")
                 st.dataframe(df_all)
+                csv_string = df_all.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download CSV",
+                    data=csv_string,
+                    file_name="wetterdaten.csv",
+                    mime="text/csv"
+                )
