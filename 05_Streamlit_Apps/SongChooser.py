@@ -2,18 +2,15 @@
 
 import pandas as pd
 import streamlit as st
-import os
 
 st.title("🎸 Liedauswahl mit Akkorddiagrammen und Übungsplan")
 
-# CSV-Datei aus dem lokalen Projektverzeichnis laden
-csv_path = os.path.join("Liederdatenbank_gesamt.csv")
-if not os.path.exists(csv_path):
-    st.error(f"❌ Datei '{csv_path}' nicht gefunden. Bitte im gleichen Ordner wie das Skript ablegen.")
+# Direkt aus GitHub-kompatiblem Pfad laden (z. B. wenn Datei im gleichen Verzeichnis liegt)
+try:
+    df = pd.read_csv("Liederdatenbank_gesamt.csv", encoding="utf-8")
+except Exception as e:
+    st.error(f"❌ Fehler beim Laden der Datei 'Liederdatenbank_gesamt.csv': {e}")
     st.stop()
-
-# Gesamtdatenbank laden
-df = pd.read_csv(csv_path)
 
 # Akkorddiagramm-Linkgenerator (vereinfachte Form)
 def akkord_diagramm_links(akkord_string):
