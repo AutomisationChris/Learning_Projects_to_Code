@@ -7,7 +7,7 @@ import os
 st.title("🎸 Liedauswahl mit Akkorddiagrammen und Übungsplan")
 
 # CSV-Datei aus dem lokalen Projektverzeichnis laden
-csv_path = os.path.join(os.path.dirname(__file__), "Liederdatenbank_gesamt.csv")
+csv_path = os.path.join("Liederdatenbank_gesamt.csv")
 if not os.path.exists(csv_path):
     st.error(f"❌ Datei '{csv_path}' nicht gefunden. Bitte im gleichen Ordner wie das Skript ablegen.")
     st.stop()
