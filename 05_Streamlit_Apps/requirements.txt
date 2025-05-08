@@ -1,3 +1,4 @@
+cantera 
 streamlit
 pandas
 matplotlib
