@@ -24,10 +24,10 @@ R = ct.gas_constant # 8314.47215 Pa*m^3/K/kmol
 #==============================================================================
 # load components to phases
 #==============================================================================
-s = ct.Solution('data/min-species.xml','solid')
-g = ct.Solution('data/min-species.xml','gas')
+s = ct.Solution('data/min-species.yaml','solid')
+g = ct.Solution('data/min-species.yaml','gas')
 #print s.species_names
-air = ct.Solution('data/air.cti','air')
+air = ct.Solution('data/air.yaml','air')
 f = ct.Mixture([(s,1),(g,1)])
 # preallocate variable
 nsp = f.n_species
