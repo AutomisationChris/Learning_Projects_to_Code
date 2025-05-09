@@ -27,7 +27,7 @@ R = ct.gas_constant # 8314.47215 Pa*m^3/K/kmol
 s = ct.Solution('min-species.yaml','solid')
 g = ct.Solution('min-species.yaml','gas')
 #print s.species_names
-air = ct.Solution('data/air.yaml','air')
+air = ct.Solution('air.yaml','air')
 f = ct.Mixture([(s,1),(g,1)])
 # preallocate variable
 nsp = f.n_species
