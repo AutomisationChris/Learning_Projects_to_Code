@@ -1,0 +1,20 @@
+generator: ctml2yaml
+cantera-version: 3.1.0
+date: Thu, 08 May 2025 17:56:27 +0200
+input-files: [max-species.xml]
+
+phases:
+- name: gas
+  elements: [C, H, O, N, S, Cl, P, Ar]
+  skip-undeclared-elements: true
+  species:
+  - nasa_gas2.yaml/species: [all]
+  thermo: ideal-gas
+  state: {T: 300.0 K, P: 1.01325e+05 Pa}
+- name: solid
+  elements: [Si, Ca, Al, Fe, Na, K, Mg, P, Ti, C, H, O, N, S, Cl]
+  skip-undeclared-elements: true
+  species:
+  - nasa_condensed2.yaml/species: [all]
+  thermo: ideal-gas
+  state: {T: 300.0 K, P: 1.01325e+05 Pa}

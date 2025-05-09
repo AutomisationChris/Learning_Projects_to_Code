@@ -1,0 +1,35 @@
+description: |-
+  Generated from file steam.dat
+  by ck2cti on Thu Nov 19 14:09:10 2009
+
+generator: cti2yaml
+cantera-version: 3.1.0
+date: Thu, 08 May 2025 17:57:50 +0200
+input-files: [steam.cti]
+
+units: {length: cm, quantity: mol, activation-energy: cal/mol}
+
+phases:
+- name: steam
+  thermo: ideal-gas
+  elements: [H, O]
+  species: [H2O]
+  kinetics: gas
+  reactions: none
+  state:
+    T: 400.0
+    P: 1.01325e+05
+    X: {H2O: 1}
+
+species:
+- name: H2O
+  composition: {H: 2, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [4.19864056, -2.0364341e-03, 6.52040211e-06, -5.48797062e-09, 1.77197817e-12,
+      -3.02937267e+04, -0.849032208]
+    - [2.67703787, 2.97318329e-03, -7.7376969e-07, 9.44336689e-11, -4.26900959e-15,
+      -2.98858938e+04, 6.88255571]
+  note: L 8/89
