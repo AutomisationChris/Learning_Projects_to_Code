@@ -2,7 +2,7 @@
 #==============================================================================
 # import libraries/files
 #==============================================================================
-import \Gasification\feedstock
+import feedstock
 import pp
 import gasifier
 import numpy as np
