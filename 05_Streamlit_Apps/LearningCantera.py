@@ -3,8 +3,7 @@ import numpy as np
 import streamlit as st
 
 gas1 = ct.Solution('gri30.yaml')
-cantera_output = gas1()
-
+cantera_output = str(gas1())
 
 # Streamlit Interface
 st.title('Cantera Gas Simulation in Streamlit')
