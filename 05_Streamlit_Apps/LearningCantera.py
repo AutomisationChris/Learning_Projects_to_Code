@@ -11,4 +11,4 @@ st.title('Cantera Gas Simulation in Streamlit')
 
 st.write(gas1())
 st.write("Cantera Output:")
-st.write( cantera_output )
+st.text( cantera_output )
