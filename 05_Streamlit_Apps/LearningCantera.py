@@ -1,7 +1,7 @@
 import cantera as ct
 import numpy as np
 import streamlit as st
-
+gas1.TP = 1200, 101325
 gas1 = ct.Solution('gri30.yaml')
 cantera_output = str(gas1())
 
