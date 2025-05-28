@@ -1,49 +1,57 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.patches as patches
 
-# Set the title of the app
-st.title("Realistic Birthday Cake Without Candles")
+# Set the title of the Streamlit app
+st.title("Happy Birthday Cake")
 
-# Function to draw a more realistic birthday cake
+# Function to draw the birthday cake
 def draw_birthday_cake():
+    # Set up the figure and axis
     fig, ax = plt.subplots(figsize=(6, 6))
 
-    # Draw the base (cake body - round and flat)
-    cake_base = plt.Circle((0.5, 0.4), 0.4, color='brown', ec="black", lw=3)
+    # Draw the cake base (circle)
+    cake_base = plt.Circle((0.5, 0.3), 0.4, color='brown', ec="black", lw=3)
     ax.add_artist(cake_base)
 
-    # Draw the frosting layer (a bit rounded at the top)
-    cake_top_layer = plt.Circle((0.5, 0.65), 0.38, color='peachpuff', ec="black", lw=3)
-    ax.add_artist(cake_top_layer)
+    # Draw the top layer of the cake (frosting)
+    top_layer = plt.Circle((0.5, 0.5), 0.38, color='peachpuff', ec="black", lw=3)
+    ax.add_artist(top_layer)
 
-    # Add detailed chocolate ganache drip effect with wavy pattern
+    # Draw the frosting on top (wavy effect)
     x = np.linspace(0.1, 0.9, 100)
-    y = 0.65 + 0.05 * np.sin(12 * np.pi * x)  # More frequency for a denser drip effect
-    ax.fill_between(x, y, 0.68, color='chocolate', lw=2)
+    y = 0.5 + 0.04 * np.sin(10 * np.pi * x)  # Sinusoidal for wavy frosting
+    ax.fill_between(x, y, 0.55, color='white', lw=2)
 
-    # Add sugar pearls on the frosting (white dots)
+    # Draw candles (colored)
+    candle_positions = [-0.1, 0, 0.1]
+    candle_colors = ['red', 'green', 'blue']
+
+    for i, pos in enumerate(candle_positions):
+        ax.plot([0.5 + pos, 0.5 + pos], [0.55, 0.75], color=candle_colors[i], lw=5)
+
+    # Add the flame on top of each candle (yellow circles)
+    for i, pos in enumerate(candle_positions):
+        ax.plot(0.5 + pos, 0.75, 'o', color='yellow', markersize=8)
+
+    # Draw sprinkles on top of the cake (colored dots)
+    colors = ['red', 'yellow', 'green', 'blue', 'purple']
     for _ in range(30):
-        ax.plot(np.random.uniform(0.35, 0.65), np.random.uniform(0.7, 0.75), 'o', color='white', markersize=8)
+        ax.plot(np.random.uniform(0.35, 0.65), np.random.uniform(0.6, 0.7), 'o', color=np.random.choice(colors), markersize=6)
 
-    # Add colorful sprinkles on top of the frosting (random colors)
-    np.random.seed(0)
-    for _ in range(50):
-        ax.plot(np.random.uniform(0.35, 0.65), np.random.uniform(0.75, 0.85), 'o', color=np.random.choice(['red', 'green', 'blue', 'yellow', 'pink']), markersize=6)
-
-    # Draw a subtle plate underneath the cake (slightly larger circle)
-    plate = plt.Circle((0.5, 0.25), 0.5, color='lightgray', ec="black", lw=2, fill=False)
+    # Add a plate underneath the cake
+    plate = plt.Circle((0.5, 0.2), 0.5, color='lightgray', ec="black", lw=2, fill=False)
     ax.add_artist(plate)
 
-    # Remove axes for a cleaner look
+    # Set axis limits and aspect ratio
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.set_aspect('equal')
     ax.axis('off')
 
-    # Display the cake
-    st.pyplot(fig)
+    # Return the figure object
+    return fig
 
-# Draw and display the cake
-draw_birthday_cake()
+# Draw and display the cake in Streamlit
+fig = draw_birthday_cake()
+st.pyplot(fig)
