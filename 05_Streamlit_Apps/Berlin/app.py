@@ -119,12 +119,24 @@ def build_segments_for_date(date_yyyymmdd: int):
     stops, routes, trips, cald, stop_times = load_tables()
 
     # U-Bahn routes: agency_id=796, route_type=400, U1..U9
-    routes_u = routes[
-        (routes["agency_id"] == 796)
-        & (routes["route_type"] == 400)
-        & (routes["route_short_name"].str.match(r"U\d+"))
+    trips_u = trips.merge(routes_u, on="route_id", how="inner")
+    trips_u = trips_u[trips_u["service_id"].isin(active_services)][
+        ["trip_id", "route_short_name", "route_color", "shape_id"]
     ].copy()
 
+    shape_ids = set(trips_u["shape_id"].dropna().unique().tolist())
+    shapes = load_shapes_filtered(shape_ids)
+
+    # polylines als Liste von Nx2 arrays (lon, lat) für Matplotlib LineCollection
+    shape_lines = []
+    if not shapes.empty:
+        for _, g in shapes.groupby("shape_id", sort=False):
+            # LineCollection erwartet [(x,y), (x,y), ...] -> hier (lon, lat)
+            pts = np.column_stack([g["shape_pt_lon"].to_numpy(np.float64),
+                                g["shape_pt_lat"].to_numpy(np.float64)])
+        if len(pts) >= 2:
+            shape_lines.append(pts)
+    
     # route_color kann leer sein → fallback
     routes_u["route_color"] = routes_u["route_color"].fillna("").replace("", "999999")
 
@@ -187,6 +199,7 @@ def build_segments_for_date(date_yyyymmdd: int):
         "line_names": line_names,
         "stops_lat": used_stops["stop_lat"].to_numpy(np.float64),
         "stops_lon": used_stops["stop_lon"].to_numpy(np.float64),
+        "shape_lines": shape_lines,
     }
 
     arrays["t_min"] = int(seg["t0"].min())
@@ -268,5 +281,6 @@ if start:
         plt.close(fig)
 
         time.sleep(1 / fps)
+
 
 
