@@ -3,66 +3,60 @@
 # - pandas
 # - numpy
 # - matplotlib
-# - pillow (PIL)  [used only for GIF creation]
+# - imageio
+# - contextily (optional, for basemap tiles)
+# - xyzservices (optional, provider registry for contextily)
 
 from __future__ import annotations
 
 import io
+import time
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 
-# Optional basemap tiles (requires 'contextily' in requirements)
+import imageio.v2 as imageio
+
+# Optional basemap (downloads tiles from the internet)
 try:
-    import contextily as ctx
+    import contextily as cx  # type: ignore
 except Exception:
-    ctx = None
-
-from PIL import Image
+    cx = None
 
 
-# ============================================================
-# Config
-# ============================================================
-
+# -------------------------
+# Paths / files
+# -------------------------
 DATA_DIR = Path(__file__).resolve().parent
-
-STOP_TIMES_ZIP = DATA_DIR / "stop_times_ubahn.zip"
-STOP_TIMES_TXT = DATA_DIR / "stop_times_ubahn.txt"
-STOP_TIMES_PATH = STOP_TIMES_ZIP if STOP_TIMES_ZIP.exists() else STOP_TIMES_TXT
 
 FILES = {
     "stops": DATA_DIR / "stops.txt",
     "routes": DATA_DIR / "routes.txt",
     "trips": DATA_DIR / "trips_ubahn.txt",
-    "calendar": DATA_DIR / "calendar_ubahn.txt",
     "calendar_dates": DATA_DIR / "calendar_dates_ubahn.txt",
-    "stop_times": STOP_TIMES_PATH,  # uses .zip if present, else .txt
+    # stop_times may be .txt OR .zip (some feeds ship huge txt)
+    "stop_times_txt": DATA_DIR / "stop_times_ubahn.txt",
+    "stop_times_zip": DATA_DIR / "stop_times_ubahn.zip",
     "shapes": DATA_DIR / "shapes_ubahn.txt",
 }
 
-APP_TITLE = "Berlin U‑Bahn — Day in a Minute (GIF)"
-
-
-# ============================================================
-# Time helpers (GTFS)
-# ============================================================
-
+# -------------------------
+# Small utilities
+# -------------------------
 def gtfs_time_to_sec(series: pd.Series) -> np.ndarray:
-    """
-    Convert GTFS time "HH:MM:SS" into seconds since 00:00.
-    Supports hours > 24 (e.g. "27:12:00").
-    """
+    """Parse GTFS HH:MM:SS into seconds; supports hours > 24."""
     parts = series.astype(str).str.split(":", expand=True)
-    h = parts[0].astype(int).to_numpy()
-    m = parts[1].astype(int).to_numpy()
-    s = parts[2].astype(int).to_numpy()
-    return h * 3600 + m * 60 + s
+    return (
+        parts[0].astype(np.int32).to_numpy() * 3600
+        + parts[1].astype(np.int32).to_numpy() * 60
+        + parts[2].astype(np.int32).to_numpy()
+    )
 
 
 def sec_to_hms(sec: int) -> str:
@@ -72,169 +66,96 @@ def sec_to_hms(sec: int) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
-def yyyymmdd_to_datetime(date_yyyymmdd: int) -> pd.Timestamp:
-    return pd.to_datetime(str(int(date_yyyymmdd)), format="%Y%m%d")
-
-
-# ============================================================
-# Geo helpers (Web Mercator)
-# ============================================================
-
-RADIUS_EARTH = 6378137.0
-
-def lonlat_to_mercator(lon: np.ndarray, lat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """EPSG:4326 -> EPSG:3857 (meters)."""
-    lon = lon.astype(np.float64)
-    lat = lat.astype(np.float64)
-    x = RADIUS_EARTH * np.deg2rad(lon)
+def lonlat_to_webmercator(lon: np.ndarray, lat: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """EPSG:4326 -> EPSG:3857 (Web Mercator)."""
+    # clamp latitude to avoid infinity at poles
     lat = np.clip(lat, -85.05112878, 85.05112878)
-    y = RADIUS_EARTH * np.log(np.tan(np.pi / 4.0 + np.deg2rad(lat) / 2.0))
+    r = 6378137.0
+    x = r * np.deg2rad(lon)
+    y = r * np.log(np.tan(np.pi / 4 + np.deg2rad(lat) / 2))
     return x, y
 
 
-# ============================================================
-# Data loading (cached)
-# ============================================================
+def pick_ubahn_routes(routes: pd.DataFrame) -> pd.DataFrame:
+    """Pick Berlin U-Bahn routes from routes.txt (robust against feed quirks)."""
+    r = routes.copy()
+    r["route_short_name"] = r["route_short_name"].astype(str)
+    is_u = r["route_short_name"].str.match(r"^U\d+$", na=False)
+    # BVG agency_id is often 796 in public feeds; keep fallback if missing
+    if "agency_id" in r.columns:
+        is_bvg = r["agency_id"].astype(str).isin(["796", "BVG"])
+        r = r[is_u & is_bvg].copy() if is_bvg.any() else r[is_u].copy()
+    else:
+        r = r[is_u].copy()
 
+    # Some feeds use route_type 400, some 700 for subway variants -> don't overfilter.
+    r["route_color"] = r.get("route_color", "").fillna("").replace("", "999999")
+    return r[["route_id", "route_short_name", "route_color"]].drop_duplicates()
+
+
+def read_stop_times(path_txt: Path, path_zip: Path) -> pd.DataFrame:
+    """Read stop_times_ubahn from txt or from zip (first *.txt inside)."""
+    usecols = ["trip_id", "departure_time", "stop_id", "stop_sequence"]
+    dtypes = {"trip_id": "string", "stop_id": "string", "stop_sequence": "int32"}
+
+    if path_txt.exists():
+        return pd.read_csv(path_txt, usecols=usecols, dtype=dtypes)
+
+    if path_zip.exists():
+        with zipfile.ZipFile(path_zip, "r") as zf:
+            # pick first txt file
+            txts = [n for n in zf.namelist() if n.lower().endswith(".txt")]
+            if not txts:
+                raise FileNotFoundError("stop_times_ubahn.zip contains no .txt file")
+            with zf.open(txts[0]) as f:
+                return pd.read_csv(f, usecols=usecols, dtype=dtypes)
+
+    raise FileNotFoundError("Missing stop_times_ubahn.txt and stop_times_ubahn.zip")
+
+
+# -------------------------
+# Data loading (cached)
+# -------------------------
 @st.cache_data(show_spinner=False)
-def load_tables():
+def load_tables() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     stops = pd.read_csv(
         FILES["stops"],
         usecols=["stop_id", "stop_lat", "stop_lon"],
-        dtype={"stop_id": "string"},
-        low_memory=False,
+        dtype={"stop_id": "string", "stop_lat": "float64", "stop_lon": "float64"},
     )
 
     routes = pd.read_csv(
         FILES["routes"],
         usecols=["route_id", "agency_id", "route_short_name", "route_type", "route_color"],
-        dtype={"route_id": "string", "route_short_name": "string", "route_color": "string"},
-        low_memory=False,
+        dtype={"route_id": "string", "agency_id": "string", "route_short_name": "string", "route_color": "string"},
     )
 
     trips = pd.read_csv(
         FILES["trips"],
         usecols=["trip_id", "route_id", "service_id", "shape_id"],
         dtype={"trip_id": "string", "route_id": "string", "service_id": "string", "shape_id": "string"},
-        low_memory=False,
     )
 
-    calendar = pd.read_csv(
-        FILES["calendar"],
-        dtype={"service_id": "string"},
-        low_memory=False,
-    )
-
-    calendar_dates = pd.read_csv(
+    cald = pd.read_csv(
         FILES["calendar_dates"],
         usecols=["service_id", "date", "exception_type"],
         dtype={"service_id": "string", "date": "int64", "exception_type": "int8"},
-        low_memory=False,
     )
 
-    return stops, routes, trips, calendar, calendar_dates
+    stop_times = read_stop_times(FILES["stop_times_txt"], FILES["stop_times_zip"])
 
+    shapes = pd.read_csv(
+        FILES["shapes"],
+        usecols=["shape_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence"],
+        dtype={"shape_id": "string", "shape_pt_lat": "float64", "shape_pt_lon": "float64", "shape_pt_sequence": "int32"},
+    )
 
-def iter_stop_times_filtered(
-    stop_times_path: Path,
-    trip_ids: set[str],
-    chunksize: int = 600_000,
-) -> pd.DataFrame:
-    """
-    Read stop_times in chunks and keep only rows whose trip_id is in trip_ids.
-    Supports:
-      - .zip (with one .txt/.csv inside)
-      - plain .txt/.csv
-    """
-    usecols = ["trip_id", "departure_time", "stop_id", "stop_sequence"]
-    dtypes = {
-        "trip_id": "string",
-        "stop_id": "string",
-        "stop_sequence": "int32",
-        "departure_time": "string",
-    }
+    return stops, routes, trips, cald, stop_times, shapes
 
-    keep = []
-
-    suffix = stop_times_path.suffix.lower()
-    if suffix == ".zip":
-        with zipfile.ZipFile(stop_times_path) as zf:
-            members = [n for n in zf.namelist() if n.lower().endswith((".txt", ".csv"))]
-            if not members:
-                raise RuntimeError("stop_times ZIP enthält keine .txt/.csv Datei.")
-            name = members[0]
-            with zf.open(name) as f:
-                for chunk in pd.read_csv(f, usecols=usecols, dtype=dtypes, chunksize=chunksize, low_memory=False):
-                    m = chunk["trip_id"].isin(trip_ids)
-                    if m.any():
-                        keep.append(chunk.loc[m])
-    else:
-        for chunk in pd.read_csv(stop_times_path, usecols=usecols, dtype=dtypes, chunksize=chunksize, low_memory=False):
-            m = chunk["trip_id"].isin(trip_ids)
-            if m.any():
-                keep.append(chunk.loc[m])
-
-    if not keep:
-        return pd.DataFrame(columns=usecols)
-
-    return pd.concat(keep, ignore_index=True)
-
-
-def load_shapes_filtered(shape_ids: set[str], chunksize: int = 400_000) -> pd.DataFrame:
-    usecols = ["shape_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence"]
-    dtypes = {"shape_id": "string", "shape_pt_sequence": "int32"}
-    keep = []
-    for chunk in pd.read_csv(FILES["shapes"], usecols=usecols, dtype=dtypes, chunksize=chunksize, low_memory=False):
-        chunk = chunk[chunk["shape_id"].isin(shape_ids)]
-        if not chunk.empty:
-            keep.append(chunk)
-    if not keep:
-        return pd.DataFrame(columns=usecols)
-    shapes = pd.concat(keep, ignore_index=True)
-    shapes.sort_values(["shape_id", "shape_pt_sequence"], inplace=True)
-    return shapes
-
-
-# ============================================================
-# Service selection (calendar + calendar_dates)
-# ============================================================
-
-WEEKDAY_COLS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-
-def active_services_for_date(calendar: pd.DataFrame, calendar_dates: pd.DataFrame, date_yyyymmdd: int) -> set[str]:
-    d = yyyymmdd_to_datetime(date_yyyymmdd)
-    dow = d.day_name().lower()
-    if dow not in WEEKDAY_COLS:
-        dow = "monday"
-
-    cal = calendar.copy()
-    cal["start_date"] = cal["start_date"].astype(int)
-    cal["end_date"] = cal["end_date"].astype(int)
-
-    base = cal[
-        (cal["start_date"] <= date_yyyymmdd)
-        & (cal["end_date"] >= date_yyyymmdd)
-        & (cal[dow].astype(int) == 1)
-    ]["service_id"].astype("string")
-
-    active = set(base.tolist())
-
-    ex = calendar_dates[calendar_dates["date"] == date_yyyymmdd]
-    if not ex.empty:
-        add = ex.loc[ex["exception_type"] == 1, "service_id"].astype("string")
-        rem = ex.loc[ex["exception_type"] == 2, "service_id"].astype("string")
-        active.update(add.tolist())
-        active.difference_update(rem.tolist())
-
-    return active
-
-
-# ============================================================
-# Build day data (segments + background)
-# ============================================================
 
 @dataclass
 class DayData:
+    # segments for animation
     t0: np.ndarray
     t1: np.ndarray
     x0: np.ndarray
@@ -243,395 +164,360 @@ class DayData:
     y1: np.ndarray
     route_idx: np.ndarray
 
-    palette: list[str]
-    line_names: list[str]
-
+    # background
     stops_x: np.ndarray
     stops_y: np.ndarray
-    shape_lines_xy: list[np.ndarray]
+    shape_lines: List[np.ndarray]  # list of (N,2) arrays (x,y)
 
-    bounds: tuple[float, float, float, float]  # xmin, xmax, ymin, ymax
+    # styling
+    palette: List[str]
+    line_names: List[str]
+
+    # meta
     t_min: int
     t_max: int
+    bounds: Tuple[float, float, float, float]  # xmin,xmax,ymin,ymax
 
 
 @st.cache_data(show_spinner=False)
-def build_day_data(date_yyyymmdd: int) -> DayData:
-    stops, routes, trips, calendar, calendar_dates = load_tables()
+def build_day(date_yyyymmdd: int) -> DayData:
+    stops, routes, trips, cald, stop_times, shapes = load_tables()
 
-    routes = routes.copy()
-    routes["route_short_name"] = routes["route_short_name"].fillna("")
-    routes["route_color"] = routes["route_color"].fillna("").replace("", "999999")
+    routes_u = pick_ubahn_routes(routes)
 
-    # U1..U9
-    is_u = routes["route_short_name"].str.match(r"^U\d+$")
-    # Some feeds use route_type=400 for metro
-    if "route_type" in routes.columns:
-        is_u = is_u | (routes["route_type"].fillna(-1).astype(int) == 400)
-
-    routes_u = routes.loc[is_u, ["route_id", "route_short_name", "route_color"]].copy()
-    if routes_u.empty:
-        raise RuntimeError("Keine U‑Bahn routes gefunden (Filter in routes.txt passt nicht).")
-
-    active_services = active_services_for_date(calendar, calendar_dates, date_yyyymmdd)
+    # Services active on that date (this feed is basically "calendar_dates is the calendar")
+    active_services = set(
+        cald.loc[(cald["date"] == date_yyyymmdd) & (cald["exception_type"] == 1), "service_id"].tolist()
+    )
     if not active_services:
-        raise RuntimeError(f"Keine aktiven service_ids für {date_yyyymmdd} gefunden.")
+        raise ValueError(f"No active services found for {date_yyyymmdd}")
 
     trips_u = trips.merge(routes_u, on="route_id", how="inner")
     trips_u = trips_u[trips_u["service_id"].isin(active_services)][
-        ["trip_id", "route_short_name", "route_color", "shape_id"]
+        ["trip_id", "route_id", "route_short_name", "route_color", "shape_id"]
     ].copy()
 
-    if trips_u.empty:
-        raise RuntimeError(f"Keine U‑Bahn trips für {date_yyyymmdd} gefunden.")
+    active_trip_ids = set(trips_u["trip_id"].tolist())
+    if not active_trip_ids:
+        raise ValueError(f"No trips found for {date_yyyymmdd} (after filtering to U-Bahn)")
 
-    trip_ids = set(trips_u["trip_id"].astype("string").tolist())
+    # Filter stop_times to active trips
+    stt = stop_times[stop_times["trip_id"].isin(active_trip_ids)].copy()
 
-    stop_times = iter_stop_times_filtered(FILES["stop_times"], trip_ids=trip_ids)
-    if stop_times.empty:
-        raise RuntimeError("stop_times gefiltert ist leer (trip_ids Filter / stop_times Datei prüfen).")
+    # Join stop coords
+    stt = stt.merge(stops, on="stop_id", how="left").dropna(subset=["stop_lat", "stop_lon"])
 
-    stops = stops.dropna(subset=["stop_lat", "stop_lon"]).copy()
-    stop_times = stop_times.merge(stops, on="stop_id", how="left").dropna(subset=["stop_lat", "stop_lon"])
+    # Parse times -> seconds
+    stt["t0"] = gtfs_time_to_sec(stt["departure_time"])
+    stt.sort_values(["trip_id", "stop_sequence"], inplace=True)
 
-    stop_times["t0"] = gtfs_time_to_sec(stop_times["departure_time"])
-    stop_times.sort_values(["trip_id", "stop_sequence"], inplace=True)
+    # Build consecutive-stop segments per trip
+    g = stt.groupby("trip_id", sort=False)
+    stt["lat1"] = g["stop_lat"].shift(-1)
+    stt["lon1"] = g["stop_lon"].shift(-1)
+    stt["t1"] = g["t0"].shift(-1)
 
-    g = stop_times.groupby("trip_id", sort=False)
-    stop_times["stop_lat_1"] = g["stop_lat"].shift(-1)
-    stop_times["stop_lon_1"] = g["stop_lon"].shift(-1)
-    stop_times["t1"] = g["t0"].shift(-1)
+    seg = stt.dropna(subset=["lat1", "lon1", "t1"]).copy()
+    seg.rename(columns={"stop_lat": "lat0", "stop_lon": "lon0"}, inplace=True)
 
-    seg = stop_times.dropna(subset=["stop_lat_1", "stop_lon_1", "t1"]).copy()
+    # forward only
     seg = seg[seg["t1"] > seg["t0"]]
 
-    seg = seg.merge(
-        trips_u[["trip_id", "route_short_name", "route_color"]],
-        on="trip_id",
-        how="left",
-    ).dropna(subset=["route_short_name", "route_color"])
+    # add route for coloring
+    seg = seg.merge(trips_u[["trip_id", "route_short_name", "route_color"]], on="trip_id", how="left")
+    seg = seg.dropna(subset=["route_short_name", "route_color"])
 
-    def _u_sort_key(name: str) -> int:
-        try:
-            return int(str(name).replace("U", ""))
-        except Exception:
-            return 999
-
-    line_names = sorted(seg["route_short_name"].astype(str).unique().tolist(), key=_u_sort_key)
-
-    palette: list[str] = []
+    # palette mapping
+    line_names = sorted(seg["route_short_name"].unique().tolist(), key=lambda x: int(str(x)[1:]))
+    palette = []
     for ln in line_names:
-        s = routes_u.loc[routes_u["route_short_name"] == ln, "route_color"]
-        palette.append("#" + (s.iloc[0] if len(s) else "999999"))
+        col = trips_u.loc[trips_u["route_short_name"] == ln, "route_color"]
+        c = (col.iloc[0] if len(col) else "999999")
+        palette.append("#" + str(c))
 
     idx_map = {ln: i for i, ln in enumerate(line_names)}
     seg["route_idx"] = seg["route_short_name"].map(idx_map).astype(np.int16)
 
-    # Mercator endpoints
-    x0, y0 = lonlat_to_mercator(seg["stop_lon"].to_numpy(np.float64), seg["stop_lat"].to_numpy(np.float64))
-    x1, y1 = lonlat_to_mercator(seg["stop_lon_1"].to_numpy(np.float64), seg["stop_lat_1"].to_numpy(np.float64))
+    # background stops (only used stops)
+    used_stop_ids = stt["stop_id"].unique()
+    used_stops = stops[stops["stop_id"].isin(used_stop_ids)].copy()
 
-    # Background stops (used only)
-    used_stop_ids = stop_times["stop_id"].astype("string").unique().tolist()
-    used_stops = stops[stops["stop_id"].isin(used_stop_ids)]
-    stops_x, stops_y = lonlat_to_mercator(
-        used_stops["stop_lon"].to_numpy(np.float64),
-        used_stops["stop_lat"].to_numpy(np.float64),
+    # Convert to Web Mercator (for basemap + consistent aspect)
+    x0, y0 = lonlat_to_webmercator(seg["lon0"].to_numpy(np.float64), seg["lat0"].to_numpy(np.float64))
+    x1, y1 = lonlat_to_webmercator(seg["lon1"].to_numpy(np.float64), seg["lat1"].to_numpy(np.float64))
+    stops_x, stops_y = lonlat_to_webmercator(
+        used_stops["stop_lon"].to_numpy(np.float64), used_stops["stop_lat"].to_numpy(np.float64)
     )
 
-    # Background shapes (polylines)
-    shape_lines_xy: list[np.ndarray] = []
-    shape_ids = set(trips_u["shape_id"].dropna().astype("string").unique().tolist())
-    shapes = load_shapes_filtered(shape_ids)
-    if not shapes.empty:
-        for _, gsh in shapes.groupby("shape_id", sort=False):
-            sx, sy = lonlat_to_mercator(
-                gsh["shape_pt_lon"].to_numpy(np.float64),
-                gsh["shape_pt_lat"].to_numpy(np.float64),
-            )
-            pts = np.column_stack([sx, sy])
-            if len(pts) >= 2:
-                shape_lines_xy.append(pts)
+    # Shape polylines (background track lines)
+    # Keep only shape_ids referenced by our active trips
+    shape_ids = set(trips_u["shape_id"].dropna().unique().tolist())
+    shapes_u = shapes[shapes["shape_id"].isin(shape_ids)].copy()
+    shapes_u.sort_values(["shape_id", "shape_pt_sequence"], inplace=True)
 
-    # Bounds + padding
-    xmin = float(np.min(stops_x))
-    xmax = float(np.max(stops_x))
-    ymin = float(np.min(stops_y))
-    ymax = float(np.max(stops_y))
+    shape_lines: List[np.ndarray] = []
+    if not shapes_u.empty:
+        for _, gg in shapes_u.groupby("shape_id", sort=False):
+            xs, ys = lonlat_to_webmercator(
+                gg["shape_pt_lon"].to_numpy(np.float64), gg["shape_pt_lat"].to_numpy(np.float64)
+            )
+            pts = np.column_stack([xs, ys])
+            if len(pts) >= 2:
+                shape_lines.append(pts)
+
+    # Bounds (with padding)
+    xmin, xmax = float(stops_x.min()), float(stops_x.max())
+    ymin, ymax = float(stops_y.min()), float(stops_y.max())
     pad_x = (xmax - xmin) * 0.06
     pad_y = (ymax - ymin) * 0.06
     bounds = (xmin - pad_x, xmax + pad_x, ymin - pad_y, ymax + pad_y)
 
-    t_min = int(seg["t0"].min())
-    t_max = int(seg["t1"].max())
-
     return DayData(
         t0=seg["t0"].to_numpy(np.int32),
         t1=seg["t1"].to_numpy(np.int32),
-        x0=x0,
-        y0=y0,
-        x1=x1,
-        y1=y1,
+        x0=x0.astype(np.float64),
+        y0=y0.astype(np.float64),
+        x1=x1.astype(np.float64),
+        y1=y1.astype(np.float64),
         route_idx=seg["route_idx"].to_numpy(np.int16),
+        stops_x=stops_x.astype(np.float64),
+        stops_y=stops_y.astype(np.float64),
+        shape_lines=shape_lines,
         palette=palette,
         line_names=line_names,
-        stops_x=stops_x,
-        stops_y=stops_y,
-        shape_lines_xy=shape_lines_xy,
+        t_min=int(seg["t0"].min()),
+        t_max=int(seg["t1"].max()),
         bounds=bounds,
-        t_min=t_min,
-        t_max=t_max,
     )
 
 
-# ============================================================
-# Rendering
-# ============================================================
-
-def fig_to_rgb(fig: plt.Figure) -> np.ndarray:
+# -------------------------
+# Basemap (cached) — downloaded once, reused for all frames
+# -------------------------
+@st.cache_data(show_spinner=False)
+def get_basemap_img(bounds: Tuple[float, float, float, float], zoom: int, provider_name: str):
     """
-    Matplotlib Figure -> RGB uint8 image (HxWx3).
-    Uses buffer_rgba (works on newer Matplotlib versions).
+    Returns (img, extent) in WebMercator coords.
+    extent = (xmin, xmax, ymin, ymax) for imshow.
     """
-    fig.canvas.draw()
-    buf = np.asarray(fig.canvas.buffer_rgba())  # HxWx4
-    return buf[..., :3].copy()
+    if cx is None:
+        return None, None, "contextily not installed (add it to requirements.txt)."
+
+    providers = {
+        "CartoDB Positron": cx.providers.CartoDB.Positron,
+        "CartoDB Voyager": cx.providers.CartoDB.Voyager,
+        "OpenStreetMap Mapnik": cx.providers.OpenStreetMap.Mapnik,
+    }
+    provider = providers.get(provider_name, cx.providers.CartoDB.Positron)
+
+    xmin, xmax, ymin, ymax = bounds
+    try:
+        # bounds2img expects w,s,e,n
+        img, ext = cx.bounds2img(xmin, ymin, xmax, ymax, zoom=zoom, source=provider, ll=False)
+        # cx returns ext = (w, e, s, n) -> convert to imshow extent (xmin, xmax, ymin, ymax)
+        extent = (ext[0], ext[1], ext[2], ext[3])
+        return img, extent, None
+    except Exception as e:
+        return None, None, f"Basemap download failed: {e}"
 
 
-def render_frame(
-    day: DayData,
-    sim_t: int,
-    width_px: int,
-    height_px: int,
-    show_shapes: bool,
-    show_stops: bool,
-    basemap_img: np.ndarray | None = None,
-    basemap_extent: tuple[float, float, float, float] | None = None,
-    basemap_alpha: float = 0.85,
-) -> np.ndarray:
-    xmin, xmax, ymin, ymax = day.bounds
-
-    mask = (day.t0 <= sim_t) & (day.t1 >= sim_t)
-    if np.any(mask):
-        dt = (day.t1[mask] - day.t0[mask]).astype(np.float64)
-        alpha = (sim_t - day.t0[mask]).astype(np.float64) / dt
-        x = day.x0[mask] + alpha * (day.x1[mask] - day.x0[mask])
-        y = day.y0[mask] + alpha * (day.y1[mask] - day.y0[mask])
-        colors = [day.palette[i] for i in day.route_idx[mask]]
-    else:
-        x = np.array([], dtype=np.float64)
-        y = np.array([], dtype=np.float64)
-        colors = []
-
-    dpi = 110
-    fig_w = max(width_px / dpi, 4.0)
-    fig_h = max(height_px / dpi, 4.0)
-
-    fig, ax = plt.subplots(figsize=(fig_w, fig_h), dpi=dpi)
-
-    # Basemap (draw first so everything else sits on top)
-    if basemap_img is not None and basemap_extent is not None:
-        ax.imshow(
-            basemap_img,
-            extent=basemap_extent,
-            alpha=float(basemap_alpha),
-            zorder=0,
-        )
-
-
-    # shapes = faint network
-    if show_shapes and day.shape_lines_xy:
-        for pts in day.shape_lines_xy:
-            ax.plot(pts[:, 0], pts[:, 1], linewidth=0.8, alpha=0.28)
-
-    # stops = faint dots
-    if show_stops:
-        ax.scatter(day.stops_x, day.stops_y, s=1.5, alpha=0.22)
-
-    # trains = colored dots
-    ax.scatter(x, y, s=12, c=colors, alpha=0.95)
-
-    ax.set_xlim(xmin, xmax)
-    ax.set_ylim(ymin, ymax)
-    ax.set_aspect("equal", adjustable="box")
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_title(sec_to_hms(sim_t), fontsize=12)
-
-    rgb = fig_to_rgb(fig)
-    plt.close(fig)
-    return rgb
-
-
+# -------------------------
+# Rendering (GIF bytes)
+# -------------------------
+@st.cache_data(show_spinner=False)
 def render_gif_bytes(
     date_yyyymmdd: int,
     fps: int,
     duration_sec: int,
-    width_px: int,
-    height_px: int,
+    show_shapes: bool,
+    show_stops: bool,
     show_basemap: bool,
     basemap_provider: str,
     basemap_zoom: int,
     basemap_alpha: float,
-    show_shapes: bool,
-    show_stops: bool,
-) -> bytes:
-    day = build_day_data(date_yyyymmdd)
+    point_size: float,
+    train_size: float,
+) -> Tuple[bytes, Dict]:
+    day = build_day(date_yyyymmdd)
 
-    basemap_img, basemap_extent = (None, None)
-    if show_basemap and ctx is not None:
-        basemap_img, basemap_extent = fetch_basemap(day.bounds, basemap_provider, int(basemap_zoom))
+    # Pre-fetch basemap once
+    basemap_img, basemap_extent, basemap_err = (None, None, None)
+    if show_basemap:
+        basemap_img, basemap_extent, basemap_err = get_basemap_img(day.bounds, basemap_zoom, basemap_provider)
 
-
-    frames_target = int(duration_sec * fps)
-    MAX_FRAMES = 240  # safety for Streamlit Cloud
-    if frames_target > MAX_FRAMES:
-        frames_target = MAX_FRAMES
-
+    frames = int(duration_sec * fps)
     sim_start, sim_end = day.t_min, day.t_max
 
-    frames: list[Image.Image] = []
-    for k in range(frames_target):
-        sim_t = int(sim_start + (k / max(frames_target - 1, 1)) * (sim_end - sim_start))
-        rgb = render_frame(
-            day=day,
-            sim_t=sim_t,
-            width_px=width_px,
-            height_px=height_px,
-            show_shapes=show_shapes,
-            show_stops=show_stops,
-            basemap_img=basemap_img,
-            basemap_extent=basemap_extent,
-            basemap_alpha=float(basemap_alpha),
-        )
-        im = Image.fromarray(rgb)
-        # quantize so GIF doesn't explode
-        im = im.convert("P", palette=Image.ADAPTIVE, colors=128)
-        frames.append(im)
+    xmin, xmax, ymin, ymax = day.bounds
+
+    meta = {
+        "t_min": day.t_min,
+        "t_max": day.t_max,
+        "lines": day.line_names,
+        "stops": len(day.stops_x),
+        "basemap_error": basemap_err,
+        "basemap_ok": basemap_img is not None,
+    }
+
+    imgs: List[np.ndarray] = []
+
+    for k in range(frames):
+        sim_t = int(sim_start + (k / max(frames - 1, 1)) * (sim_end - sim_start))
+
+        mask = (day.t0 <= sim_t) & (day.t1 >= sim_t)
+        if np.any(mask):
+            dt = (day.t1[mask] - day.t0[mask]).astype(np.float64)
+            alpha = (sim_t - day.t0[mask]).astype(np.float64) / dt
+            x = day.x0[mask] + alpha * (day.x1[mask] - day.x0[mask])
+            y = day.y0[mask] + alpha * (day.y1[mask] - day.y0[mask])
+            colors = [day.palette[i] for i in day.route_idx[mask]]
+        else:
+            x = np.array([], dtype=np.float64)
+            y = np.array([], dtype=np.float64)
+            colors = []
+
+        fig, ax = plt.subplots(figsize=(10, 10), dpi=120)
+
+        # Basemap
+        if basemap_img is not None and basemap_extent is not None:
+            ax.imshow(
+                basemap_img,
+                extent=basemap_extent,
+                origin="upper",
+                alpha=basemap_alpha,
+                zorder=0,
+            )
+
+        # Shapes (track lines)
+        if show_shapes and day.shape_lines:
+            for pts in day.shape_lines:
+                ax.plot(pts[:, 0], pts[:, 1], linewidth=1.2, alpha=0.55, zorder=1)
+
+        # Stops
+        if show_stops:
+            ax.scatter(day.stops_x, day.stops_y, s=point_size, alpha=0.25, zorder=2)
+
+        # Trains
+        ax.scatter(x, y, s=train_size, c=colors, alpha=0.95, zorder=3)
+
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
+        ax.set_aspect("equal", adjustable="box")
+        ax.set_axis_off()
+        ax.set_title(f"Berlin U-Bahn {date_yyyymmdd} — {sec_to_hms(sim_t)}", fontsize=14)
+
+        # Convert figure -> RGB image (robust across Matplotlib versions)
+        fig.canvas.draw()
+        rgba = np.asarray(fig.canvas.buffer_rgba())
+        rgb = rgba[..., :3].copy()
+
+        imgs.append(rgb)
+        plt.close(fig)
 
     buf = io.BytesIO()
-    frames[0].save(
-        buf,
-        format="GIF",
-        save_all=True,
-        append_images=frames[1:],
-        duration=int(1000 / max(fps, 1)),
-        loop=0,
-        optimize=True,
-        disposal=2,
-    )
-    return buf.getvalue()
+    imageio.mimsave(buf, imgs, format="GIF", fps=fps)
+    return buf.getvalue(), meta
 
 
-# ============================================================
+# -------------------------
 # Streamlit UI
-# ============================================================
+# -------------------------
+st.set_page_config(page_title="Berlin U-Bahn Day-in-a-Minute", layout="wide")
+st.title("Berlin U-Bahn — 1 Minute = 1 Betriebstag")
 
-st.set_page_config(page_title=APP_TITLE, layout="wide")
-st.title(APP_TITLE)
+# sanity checks
+missing = []
+for k, p in FILES.items():
+    if k in ("stop_times_txt", "stop_times_zip"):
+        continue
+    if not p.exists():
+        missing.append(k)
 
-missing = [k for k, p in FILES.items() if not p.exists()]
+# stop_times needs either txt or zip
+if not (FILES["stop_times_txt"].exists() or FILES["stop_times_zip"].exists()):
+    missing.append("stop_times_ubahn (.txt oder .zip)")
+
 if missing:
     st.error(f"Fehlende Dateien: {missing} (erwartet im Ordner: {DATA_DIR.resolve()})")
     st.stop()
 
-st.sidebar.header("Settings")
+with st.expander("Status / Debug", expanded=False):
+    st.write("DATA_DIR:", str(DATA_DIR))
+    st.write("contextily verfügbar:", cx is not None)
+    if cx is None:
+        st.info("Wenn du eine Karte willst: 'contextily' in requirements.txt aufnehmen (und deploy neu starten).")
 
-_, _, _, calendar, calendar_dates = load_tables()
-available_dates = sorted(calendar_dates["date"].unique().tolist())
+# Load dates
+_, _, _, cald, _, _ = load_tables()
+available_dates = sorted(cald.loc[cald["exception_type"] == 1, "date"].unique().tolist())
 if not available_dates:
-    # fallback: start/end from calendar
-    available_dates = [int(calendar["start_date"].min()), int(calendar["end_date"].max())]
+    st.error("Keine verfügbaren Betriebstage in calendar_dates_ubahn.txt gefunden.")
+    st.stop()
 
-date = st.sidebar.selectbox("Datum (YYYYMMDD)", available_dates, index=max(0, len(available_dates) - 1))
+# Sidebar controls
+st.sidebar.header("Einstellungen")
+date = st.sidebar.selectbox("Datum (YYYYMMDD)", available_dates, index=min(0, len(available_dates) - 1))
 
-fps = st.sidebar.slider("FPS", 2, 12, 6)
-duration_sec = st.sidebar.slider("Dauer (Sek.)", 10, 120, 60)
+fps = st.sidebar.slider("FPS (GIF)", min_value=2, max_value=20, value=8)
+duration_sec = st.sidebar.slider("Dauer (Sekunden)", min_value=10, max_value=90, value=60)
 
-width_px = st.sidebar.slider("Breite (px)", 700, 1800, 1400, 50)
-height_px = st.sidebar.slider("Höhe (px)", 700, 1800, 1400, 50)
-
-show_basemap = st.sidebar.checkbox("Basemap (Berlin-Karte) anzeigen", value=True)
-if show_basemap and ctx is None:
-    st.sidebar.warning("Basemap benötigt 'contextily' in requirements.txt (und Internet-Zugriff).")
-    show_basemap = False
-
-basemap_provider = "CartoDB.Positron"
-basemap_zoom = 11
-basemap_alpha = 0.85
-if show_basemap:
-    basemap_provider = st.sidebar.selectbox(
-        "Basemap Style",
-        options=list(BASEMAP_PROVIDERS.keys()) if BASEMAP_PROVIDERS else ["CartoDB.Positron"],
-        index=0,
-    )
-    basemap_zoom = st.sidebar.slider("Basemap Zoom", min_value=8, max_value=14, value=11)
-    basemap_alpha = st.sidebar.slider("Basemap Transparenz", min_value=0.2, max_value=1.0, value=0.85)
-
-show_shapes = st.sidebar.checkbox("Linien (shapes)", True)
-show_stops = st.sidebar.checkbox("Stops", True)
-
-st.sidebar.caption("GIFs werden intern auf max. 240 Frames begrenzt (sonst knallt Streamlit Cloud).")
-
-with st.spinner("Baue Tagesdaten (Trips + stop_times chunked)…"):
-    day = build_day_data(int(date))
-
-# Basemap for preview frame
-basemap_img, basemap_extent = (None, None)
-if show_basemap and ctx is not None:
-    basemap_img, basemap_extent = fetch_basemap(day.bounds, basemap_provider, int(basemap_zoom))
-
-
-st.write(
-    f"**Datum:** {date}  \n"
-    f"**Linien:** {', '.join(day.line_names)}  \n"
-    f"**Sim‑Zeit:** {sec_to_hms(day.t_min)} → {sec_to_hms(day.t_max)}  \n"
-    f"**Stops:** {len(day.stops_x):,}  \n"
-    f"**Segmente:** {len(day.t0):,}"
+st.sidebar.divider()
+show_basemap = st.sidebar.checkbox("Karte (Basemap) anzeigen", value=True)
+basemap_provider = st.sidebar.selectbox(
+    "Basemap Provider",
+    ["CartoDB Positron", "CartoDB Voyager", "OpenStreetMap Mapnik"],
+    index=0,
 )
+basemap_zoom = st.sidebar.slider("Basemap Zoom", min_value=10, max_value=15, value=12)
+basemap_alpha = st.sidebar.slider("Basemap Deckkraft", min_value=0.2, max_value=1.0, value=0.9)
 
-st.subheader("Preview (ein Frame)")
-c1, c2 = st.columns([2, 1], gap="large")
-with c2:
-    t_preview = st.slider("Preview‑Zeit", int(day.t_min), int(day.t_max), int(day.t_min))
-    st.caption(sec_to_hms(int(t_preview)))
+st.sidebar.divider()
+show_shapes = st.sidebar.checkbox("U-Bahn Linien (shapes) anzeigen", value=True)
+show_stops = st.sidebar.checkbox("Stops anzeigen", value=True)
 
-with c1:
-    rgb = render_frame(
-        day=day,
-        sim_t=int(t_preview),
-        width_px=int(width_px),
-        height_px=int(height_px),
-        show_shapes=bool(show_shapes),
-        show_stops=bool(show_stops),
-        basemap_img=basemap_img,
-        basemap_extent=basemap_extent,
-        basemap_alpha=float(basemap_alpha),
-    )
-    st.image(rgb, use_container_width=True)
+point_size = st.sidebar.slider("Stop-Punktgröße", min_value=0.5, max_value=6.0, value=1.8)
+train_size = st.sidebar.slider("Zug-Punktgröße", min_value=4.0, max_value=30.0, value=11.0)
 
-st.subheader("GIF rendern")
-if st.button("GIF bauen"):
-    with st.spinner("Rendere GIF…"):
-        gif_bytes = render_gif_bytes(
+# Main action
+col_left, col_right = st.columns([1, 2])
+
+with col_left:
+    st.markdown("**Output**")
+    st.caption("Erzeugt ein GIF (1 Minute) und spielt es ab. Danach kannst du es direkt herunterladen.")
+
+    render = st.button("GIF rendern")
+
+with col_right:
+    st.markdown("**Preview**")
+    placeholder = st.empty()
+
+if render:
+    with st.spinner("Rendering… (Tiles + GTFS + GIF)"):
+        gif_bytes, meta = render_gif_bytes(
             date_yyyymmdd=int(date),
             fps=int(fps),
             duration_sec=int(duration_sec),
-            width_px=int(width_px),
-            height_px=int(height_px),
+            show_shapes=bool(show_shapes),
+            show_stops=bool(show_stops),
             show_basemap=bool(show_basemap),
             basemap_provider=str(basemap_provider),
             basemap_zoom=int(basemap_zoom),
             basemap_alpha=float(basemap_alpha),
-            show_shapes=bool(show_shapes),
-            show_stops=bool(show_stops),
+            point_size=float(point_size),
+            train_size=float(train_size),
         )
 
-    st.success(f"GIF fertig: {len(gif_bytes)/1024/1024:.1f} MB")
-    st.image(gif_bytes, caption="Animation", use_container_width=True)
-    st.download_button(
-        "GIF herunterladen",
-        data=gif_bytes,
-        file_name=f"berlin_ubahn_{date}.gif",
-        mime="image/gif",
+    if show_basemap and not meta.get("basemap_ok", False):
+        st.warning(
+            "Basemap konnte nicht geladen werden. "
+            "Typisch: contextily fehlt in requirements.txt oder Tiles sind von Streamlit Cloud/Netzwerk geblockt.\n\n"
+            f"Details: {meta.get('basemap_error')}"
+        )
+
+    placeholder.image(gif_bytes, caption=f"Berlin U-Bahn {date} — {duration_sec}s @ {fps} FPS", use_container_width=True)
+    st.download_button("GIF herunterladen", data=gif_bytes, file_name=f"berlin_ubahn_{date}.gif", mime="image/gif")
+
+    st.caption(
+        f"Sim-Zeit: {sec_to_hms(meta['t_min'])} → {sec_to_hms(meta['t_max'])} · "
+        f"Stops: {meta['stops']} · Linien: {', '.join(meta['lines'])}"
     )
