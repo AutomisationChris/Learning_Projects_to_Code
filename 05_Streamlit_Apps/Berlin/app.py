@@ -16,7 +16,10 @@ import matplotlib.pyplot as plt
 # -------------------------
 # Config
 # -------------------------
-DATA_DIR = Path(".")  # wenn app.py im gleichen Ordner liegt wie die GTFS-Files
+from pathlib import Path
+
+DATA_DIR = Path(__file__).resolve().parent  
+
 
 FILES = {
     "stops": DATA_DIR / "stops.txt",
@@ -240,3 +243,4 @@ if start:
         plt.close(fig)
 
         time.sleep(1 / fps)
+
