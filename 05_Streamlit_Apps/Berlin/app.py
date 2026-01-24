@@ -55,17 +55,12 @@ def sec_to_hms(sec: int) -> str:
 # Data loading / preprocessing (cached)
 # -------------------------
 @st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False)
 def load_tables():
-    # Stops: nur was wir brauchen
     stops = pd.read_csv(
         FILES["stops"],
         usecols=["stop_id", "stop_lat", "stop_lon"],
         dtype={"stop_id": "string"},
-        trips = pd.read_csv(
-            FILES["trips"],
-            usecols=["trip_id", "route_id", "service_id", "shape_id"],
-            dtype={"trip_id": "string", "route_id": "string", "service_id": "string", "shape_id": "string"},
-)
     )
 
     routes = pd.read_csv(
@@ -76,8 +71,8 @@ def load_tables():
 
     trips = pd.read_csv(
         FILES["trips"],
-        usecols=["trip_id", "route_id", "service_id"],
-        dtype={"trip_id": "string", "route_id": "string", "service_id": "string"},
+        usecols=["trip_id", "route_id", "service_id", "shape_id"],
+        dtype={"trip_id": "string", "route_id": "string", "service_id": "string", "shape_id": "string"},
     )
 
     cald = pd.read_csv(
@@ -93,6 +88,7 @@ def load_tables():
     )
 
     return stops, routes, trips, cald, stop_times
+
 
 
 def load_shapes_filtered(shape_ids: set[str], chunksize: int = 300_000) -> pd.DataFrame:
@@ -281,6 +277,7 @@ if start:
         plt.close(fig)
 
         time.sleep(1 / fps)
+
 
 
 
