@@ -495,10 +495,11 @@ def render_gif_bytes(
             title.set_text(f"Berlin U-Bahn {date_yyyymmdd} · {sec_to_hms(sim_t)}")
             fig.canvas.draw()
 
+            # Matplotlib >= 3.9: use RGBA buffer
             w, h = fig.canvas.get_width_height()
-            img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8).reshape(h, w, 3)
-            writer.append_data(img)
-
+            rgba = np.asarray(fig.canvas.buffer_rgba(), dtype=np.uint8).reshape(h, w, 4)
+            rgb = rgba[:, :, :3]  # drop alpha
+            writer.append_data(rgb)
     plt.close(fig)
     buf.seek(0)
     return buf.getvalue()
@@ -576,3 +577,4 @@ with col_right:
         )
     else:
         st.info("Links Einstellungen setzen → „GIF rendern“ klicken.")
+
