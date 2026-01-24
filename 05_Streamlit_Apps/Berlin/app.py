@@ -25,13 +25,17 @@ from PIL import Image
 
 DATA_DIR = Path(__file__).resolve().parent
 
+STOP_TIMES_ZIP = DATA_DIR / "stop_times_ubahn.zip"
+STOP_TIMES_TXT = DATA_DIR / "stop_times_ubahn.txt"
+STOP_TIMES_PATH = STOP_TIMES_ZIP if STOP_TIMES_ZIP.exists() else STOP_TIMES_TXT
+
 FILES = {
     "stops": DATA_DIR / "stops.txt",
     "routes": DATA_DIR / "routes.txt",
     "trips": DATA_DIR / "trips_ubahn.txt",
     "calendar": DATA_DIR / "calendar_ubahn.txt",
     "calendar_dates": DATA_DIR / "calendar_dates_ubahn.txt",
-    "stop_times": DATA_DIR / "stop_times_ubahn.zip",  # zip recommended (150MB txt is fine too)
+    "stop_times": STOP_TIMES_PATH,  # uses .zip if present, else .txt
     "shapes": DATA_DIR / "shapes_ubahn.txt",
 }
 
