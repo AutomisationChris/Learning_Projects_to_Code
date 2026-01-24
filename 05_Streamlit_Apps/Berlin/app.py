@@ -27,6 +27,7 @@ FILES = {
     "trips": DATA_DIR / "trips_ubahn.txt",
     "calendar_dates": DATA_DIR / "calendar_dates_ubahn.txt",
     "stop_times": DATA_DIR / "stop_times_ubahn.txt",
+    "shapes": DATA_DIR / "shapes_ubahn.txt",
 }
 
 
@@ -60,6 +61,11 @@ def load_tables():
         FILES["stops"],
         usecols=["stop_id", "stop_lat", "stop_lon"],
         dtype={"stop_id": "string"},
+        trips = pd.read_csv(
+            FILES["trips"],
+            usecols=["trip_id", "route_id", "service_id", "shape_id"],
+            dtype={"trip_id": "string", "route_id": "string", "service_id": "string", "shape_id": "string"},
+)
     )
 
     routes = pd.read_csv(
@@ -87,6 +93,25 @@ def load_tables():
     )
 
     return stops, routes, trips, cald, stop_times
+
+
+def load_shapes_filtered(shape_ids: set[str], chunksize: int = 300_000) -> pd.DataFrame:
+    # liest shapes_ubahn.txt in chunks und behält nur benötigte shape_ids
+    usecols = ["shape_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence"]
+    dtypes = {"shape_id": "string", "shape_pt_sequence": "int32"}
+
+    keep = []
+    for chunk in pd.read_csv(FILES["shapes"], usecols=usecols, dtype=dtypes, chunksize=chunksize):
+        chunk = chunk[chunk["shape_id"].isin(shape_ids)]
+        if not chunk.empty:
+            keep.append(chunk)
+
+    if not keep:
+        return pd.DataFrame(columns=usecols)
+
+    shapes = pd.concat(keep, ignore_index=True)
+    shapes.sort_values(["shape_id", "shape_pt_sequence"], inplace=True)
+    return shapes
 
 
 @st.cache_data(show_spinner=False)
@@ -243,4 +268,5 @@ if start:
         plt.close(fig)
 
         time.sleep(1 / fps)
+
 
