@@ -16,6 +16,13 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+
+# Optional basemap tiles (requires 'contextily' in requirements)
+try:
+    import contextily as ctx
+except Exception:
+    ctx = None
+
 from PIL import Image
 
 
@@ -394,10 +401,13 @@ def fig_to_rgb(fig: plt.Figure) -> np.ndarray:
 def render_frame(
     day: DayData,
     sim_t: int,
-    width_px: int = 1100,
-    height_px: int = 1100,
-    show_shapes: bool = True,
-    show_stops: bool = True,
+    width_px: int,
+    height_px: int,
+    show_shapes: bool,
+    show_stops: bool,
+    basemap_img: np.ndarray | None = None,
+    basemap_extent: tuple[float, float, float, float] | None = None,
+    basemap_alpha: float = 0.85,
 ) -> np.ndarray:
     xmin, xmax, ymin, ymax = day.bounds
 
@@ -418,6 +428,16 @@ def render_frame(
     fig_h = max(height_px / dpi, 4.0)
 
     fig, ax = plt.subplots(figsize=(fig_w, fig_h), dpi=dpi)
+
+    # Basemap (draw first so everything else sits on top)
+    if basemap_img is not None and basemap_extent is not None:
+        ax.imshow(
+            basemap_img,
+            extent=basemap_extent,
+            alpha=float(basemap_alpha),
+            zorder=0,
+        )
+
 
     # shapes = faint network
     if show_shapes and day.shape_lines_xy:
@@ -449,10 +469,19 @@ def render_gif_bytes(
     duration_sec: int,
     width_px: int,
     height_px: int,
+    show_basemap: bool,
+    basemap_provider: str,
+    basemap_zoom: int,
+    basemap_alpha: float,
     show_shapes: bool,
     show_stops: bool,
 ) -> bytes:
     day = build_day_data(date_yyyymmdd)
+
+    basemap_img, basemap_extent = (None, None)
+    if show_basemap and ctx is not None:
+        basemap_img, basemap_extent = fetch_basemap(day.bounds, basemap_provider, int(basemap_zoom))
+
 
     frames_target = int(duration_sec * fps)
     MAX_FRAMES = 240  # safety for Streamlit Cloud
@@ -471,6 +500,9 @@ def render_gif_bytes(
             height_px=height_px,
             show_shapes=show_shapes,
             show_stops=show_stops,
+            basemap_img=basemap_img,
+            basemap_extent=basemap_extent,
+            basemap_alpha=float(basemap_alpha),
         )
         im = Image.fromarray(rgb)
         # quantize so GIF doesn't explode
@@ -519,6 +551,23 @@ duration_sec = st.sidebar.slider("Dauer (Sek.)", 10, 120, 60)
 width_px = st.sidebar.slider("Breite (px)", 700, 1800, 1400, 50)
 height_px = st.sidebar.slider("Höhe (px)", 700, 1800, 1400, 50)
 
+show_basemap = st.sidebar.checkbox("Basemap (Berlin-Karte) anzeigen", value=True)
+if show_basemap and ctx is None:
+    st.sidebar.warning("Basemap benötigt 'contextily' in requirements.txt (und Internet-Zugriff).")
+    show_basemap = False
+
+basemap_provider = "CartoDB.Positron"
+basemap_zoom = 11
+basemap_alpha = 0.85
+if show_basemap:
+    basemap_provider = st.sidebar.selectbox(
+        "Basemap Style",
+        options=list(BASEMAP_PROVIDERS.keys()) if BASEMAP_PROVIDERS else ["CartoDB.Positron"],
+        index=0,
+    )
+    basemap_zoom = st.sidebar.slider("Basemap Zoom", min_value=8, max_value=14, value=11)
+    basemap_alpha = st.sidebar.slider("Basemap Transparenz", min_value=0.2, max_value=1.0, value=0.85)
+
 show_shapes = st.sidebar.checkbox("Linien (shapes)", True)
 show_stops = st.sidebar.checkbox("Stops", True)
 
@@ -526,6 +575,12 @@ st.sidebar.caption("GIFs werden intern auf max. 240 Frames begrenzt (sonst knall
 
 with st.spinner("Baue Tagesdaten (Trips + stop_times chunked)…"):
     day = build_day_data(int(date))
+
+# Basemap for preview frame
+basemap_img, basemap_extent = (None, None)
+if show_basemap and ctx is not None:
+    basemap_img, basemap_extent = fetch_basemap(day.bounds, basemap_provider, int(basemap_zoom))
+
 
 st.write(
     f"**Datum:** {date}  \n"
@@ -549,6 +604,9 @@ with c1:
         height_px=int(height_px),
         show_shapes=bool(show_shapes),
         show_stops=bool(show_stops),
+        basemap_img=basemap_img,
+        basemap_extent=basemap_extent,
+        basemap_alpha=float(basemap_alpha),
     )
     st.image(rgb, use_container_width=True)
 
@@ -561,6 +619,10 @@ if st.button("GIF bauen"):
             duration_sec=int(duration_sec),
             width_px=int(width_px),
             height_px=int(height_px),
+            show_basemap=bool(show_basemap),
+            basemap_provider=str(basemap_provider),
+            basemap_zoom=int(basemap_zoom),
+            basemap_alpha=float(basemap_alpha),
             show_shapes=bool(show_shapes),
             show_stops=bool(show_stops),
         )
