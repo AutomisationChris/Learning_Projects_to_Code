@@ -11,7 +11,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ─── CSS: DB Navigator Look ───────────────────────────────────────────────────
+# ─── CSS: DB Navigator Look
+
+ ───────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DB+Sans:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&display=swap');
