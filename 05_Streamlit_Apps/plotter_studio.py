@@ -140,7 +140,6 @@ def main():
       background-size: auto, 18px 18px;
     }
     .stApp [data-testid="stHeader"] {background: transparent;}
-    [data-testid="stSidebar"] {background: #e5eaf1;}
     [data-testid="stAppViewContainer"] .block-container {max-width: 1160px;}
     .stApp h1 {color: #243855; font-family: Georgia, serif; font-size: clamp(3rem, 7vw, 5rem);}
     .stApp h2, .stApp p, .stApp label, .stApp [data-testid="stMetricValue"] {color: #243855;}
@@ -153,8 +152,7 @@ def main():
     st.write("Turn a photo into a two-ink engraving for your pen plotter.")
     photo = st.file_uploader("Upload a photo", type=["jpg", "jpeg", "png", "webp"])
 
-    with st.sidebar:
-        st.header("Hatching settings")
+    with st.expander("Hatching settings", expanded=True):
         width = st.slider("Artwork width (mm)", 20, 841, 180)
         spacing = st.slider("Line spacing (mm)", 0.2, 5.0, 0.6, 0.05)
         cell = st.slider("Cell length (mm)", 0.2, 8.0, 1.2, 0.05)
@@ -163,7 +161,7 @@ def main():
                             help="Must be at most the cell length.")
         shadow = st.slider("Diagonal darkness threshold", 0.0, 0.95, 0.15, 0.05,
                            help="Lower values add diagonal hatching to lighter tones.")
-        generate = st.button("Generate hatching", type="primary")
+    generate = st.button("Generate hatching", type="primary")
 
     if photo is None:
         st.info("Upload a photo to get started.")
@@ -209,5 +207,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
