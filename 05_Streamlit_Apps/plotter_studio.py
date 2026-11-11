@@ -2,8 +2,9 @@
 from io import BytesIO
 import math
 from pathlib import Path
+from xml.etree import ElementTree
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageDraw, ImageOps
 
 BAYER = ((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5))
 
@@ -93,6 +94,37 @@ def render_svg(image, width, spacing, cell, pen, minimum, shadow):
     return '\n'.join(svg), height, counts
 
 
+def render_jpg(svg):
+    """Rasterize the generated M/L paths on white paper."""
+    root = ElementTree.fromstring(svg)
+    left, top, width, height = map(float, root.attrib["viewBox"].split())
+    scale = min(300 / 25.4, 4096 / max(width, height))
+    oversampling = 2
+    raster_scale = scale * oversampling
+    size = tuple(max(1, round(length * scale)) for length in (width, height))
+    canvas = Image.new("RGB", tuple(n * oversampling for n in size), "white")
+    draw = ImageDraw.Draw(canvas)
+    for group in root:
+        ink = group.attrib["stroke"]
+        stroke = max(1, round(float(group.attrib["stroke-width"]) * raster_scale))
+        radius = (stroke - 1) / 2
+        for path in group:
+            _, start, _, end = path.attrib["d"].split()
+            points = []
+            for pair in (start, end):
+                x, y = map(float, pair.split(","))
+                points.append(((x - left) * raster_scale, (y - top) * raster_scale))
+            draw.line(points, fill=ink, width=stroke)
+            for x, y in points:
+                draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=ink)
+    output = BytesIO()
+    canvas.resize(size, Image.Resampling.LANCZOS).save(
+        output, format="JPEG", quality=95, subsampling=0,
+        dpi=(round(scale * 25.4),) * 2,
+    )
+    return output.getvalue()
+
+
 def main():
     import base64
     import streamlit as st
@@ -149,7 +181,7 @@ def main():
                     )
                 with st.spinner("Generating hatching…"):
                     result = render_svg(gray, *settings)
-                st.session_state["plot"] = (data, settings, result)
+                st.session_state["plot"] = (data, settings, result, render_jpg(result[0]))
             except (OSError, Image.DecompressionBombError):
                 st.error("Could not read this image.")
 
@@ -169,9 +201,13 @@ def main():
                     f'src="data:image/svg+xml;base64,{encoded}"></div>', unsafe_allow_html=True)
         st.caption(f"Artwork {width:g} × {height:.1f} mm · "
                    f"{counts[0]:,} horizontal / {counts[1]:,} diagonal strokes".replace(",", " "))
-        st.download_button("Download SVG", svg, f"{Path(photo.name).stem}_plot.svg",
-                           "image/svg+xml")
+        filename = f"{Path(photo.name).stem}_plot"
+        svg_column, jpg_column = st.columns(2)
+        svg_column.download_button("Download SVG", svg, f"{filename}.svg", "image/svg+xml")
+        jpg_column.download_button("Download JPG", saved[3], f"{filename}.jpg", "image/jpeg")
 
 
 if __name__ == "__main__":
     main()
+
+
